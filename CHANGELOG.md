@@ -4,6 +4,41 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] - 2026-11-16
+
+### Fixed
+
+- **A lock record is only pruned for a skill that lives in the lock's own root.** `~/.agents/.skill-lock.json`
+  governs `~/.agents/skills`, so deleting a same-named skill installed in `~/.dsh/skills` or
+  `~/.dsh/agent-skills` no longer removes (or copies into the trash) the `~/.agents` registration of a skill
+  that still exists. Restore re-checks ownership too, so entries written by 1.4.0–1.4.2 cannot write a foreign
+  record back.
+- The delete dialog's promise for a skill whose directory is already gone is now real: such an item is sent
+  with the request so its stale lock record is cleaned, and the result counts it as cleanup instead of a
+  failure (previously it was marked not-deletable and silently filtered out).
+- Dialogs own the keyboard: typing `删除` / `DELETE` or pressing `Enter` inside the confirmation dialog no
+  longer inserts a `/skill` command into the composer behind it, and `Esc` closes the dialog. Selection mode
+  also stops `Enter` / `↑` `↓` from inserting, as the README already claimed.
+- Host failures no longer lose their detail: the browser call keeps the host's `results` and `aborted`
+  payload, so the dialog can say “skill-lock write failed” or “lock unreadable” instead of a generic
+  “could not read the deletion preview”.
+- Restoring from the trash reports an unreadable `.skill-lock.json` correctly instead of a generic failure.
+- Permanent deletion reports the real outcome (“deleted N, K failed”) instead of always claiming success.
+- A tampered or half-written trash `meta.json` is ignored (no measuring outside the entry, no invalid names
+  listed); restoring an entry whose payload is missing or is not a plain directory now reports
+  `payload-missing` / `payload-unsafe` instead of a raw `ENOENT`.
+- A lock whose `skills` field is not an object (e.g. an array) is treated as unreadable and aborts the delete
+  instead of rewriting the registry empty.
+- Dismissing the delete dialog while the preview request is in flight no longer makes it pop back open.
+- A rejected clipboard write no longer leaves an unhandled promise rejection in the console.
+- Narrow layout no longer repeats “批量删除” as a badge on every row in selection mode; it shows the provider.
+- The sort menu entry “按来源分组” is renamed to “按来源排序” so it is not confused with the group filter.
+
+### Tests
+
+- Four new host tests (lock ownership across roots, an invalid trash manifest, a missing trash payload, a
+  non-object `skills` field) — 18 in total.
+
 ## [1.4.2] - 2026-11-16
 
 ### Changed

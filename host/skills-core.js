@@ -31,6 +31,16 @@ export function skillRoots(home = os.homedir()) {
   ]
 }
 
+/**
+ * A row of the registry only governs skills that live in the same root as the
+ * lock file: `~/.agents/.skill-lock.json` registers `~/.agents/skills/*`. A
+ * skill of the same name under `~/.dsh/skills` is a different installation and
+ * must neither read nor prune that record.
+ */
+function ownsLock(root, lockPath) {
+  return Boolean(root && root.lock && lockPath && samePath(root.lock, lockPath))
+}
+
 export function isValidName(name) {
   return typeof name === 'string'
     && NAME_PATTERN.test(name)
@@ -114,7 +124,8 @@ export async function readLock(lockPath) {
     if (data === null || typeof data !== 'object' || Array.isArray(data)) {
       return { ok: false, reason: 'lock-unreadable' }
     }
-    if (data.skills !== undefined && (data.skills === null || typeof data.skills !== 'object')) {
+    if (data.skills !== undefined
+      && (data.skills === null || typeof data.skills !== 'object' || Array.isArray(data.skills))) {
       return { ok: false, reason: 'lock-unreadable' }
     }
     return { ok: true, data }
@@ -177,7 +188,14 @@ export async function preview(names, roots = skillRoots()) {
   for (const name of list.names) {
     const found = await locate(name, roots)
     if (found.ok === false) {
-      items.push({ name, allowed: false, reason: found.reason, lockRegistered: Object.hasOwn(registered, name) })
+      // A registered name whose directory is gone everywhere is cleaned out, so
+      // it is honest to report the record here; every other refusal is a no-op.
+      items.push({
+        name,
+        allowed: false,
+        reason: found.reason,
+        lockRegistered: found.reason === 'missing' && Object.hasOwn(registered, name)
+      })
       continue
     }
     const stats = await measure(found.dir)
@@ -188,7 +206,7 @@ export async function preview(names, roots = skillRoots()) {
       root: found.root.id,
       bytes: stats.bytes,
       files: stats.files,
-      lockRegistered: Object.hasOwn(registered, name),
+      lockRegistered: ownsLock(found.root, lockRoot && lockRoot.lock) && Object.hasOwn(registered, name),
       lockShared: found.root.lock !== null
     })
   }
@@ -277,7 +295,10 @@ export async function listTrash(roots = skillRoots()) {
       } catch (error) {
         continue
       }
-      const payloadDir = path.join(entryDir, meta.name || '')
+      // A tampered or half-written manifest must not make us measure (or later
+      // move) anything outside the entry directory.
+      if (!meta || typeof meta !== 'object' || !isValidName(meta.name)) continue
+      const payloadDir = path.join(entryDir, meta.name)
       const stats = await measure(payloadDir)
       items.push({
         id: meta.id || entry.name,
@@ -335,13 +356,23 @@ export async function restoreFromTrash(ids, roots = skillRoots()) {
       results.push({ id, ok: false, reason: 'target-exists' })
       continue
     }
+    const payload = path.join(entry.entryDir, entry.name)
+    const payloadInfo = await statOrNull(payload)
+    if (payloadInfo === null) {
+      results.push({ id, ok: false, name: entry.name, reason: 'payload-missing' })
+      continue
+    }
+    if (payloadInfo.isSymbolicLink() || !payloadInfo.isDirectory()) {
+      results.push({ id, ok: false, name: entry.name, reason: 'payload-unsafe' })
+      continue
+    }
     try {
       await fs.mkdir(root.dir, { recursive: true })
-      await fs.rename(path.join(entry.entryDir, entry.name), target)
+      await fs.rename(payload, target)
     } catch (error) {
       try {
-        await fs.cp(path.join(entry.entryDir, entry.name), target, { recursive: true, force: false, errorOnExist: true })
-        await fs.rm(path.join(entry.entryDir, entry.name), { recursive: true, force: true })
+        await fs.cp(payload, target, { recursive: true, force: false, errorOnExist: true })
+        await fs.rm(payload, { recursive: true, force: true })
       } catch (fallbackError) {
         results.push({ id, ok: false, reason: (fallbackError && fallbackError.code) || 'restore-failed' })
         continue
@@ -349,7 +380,9 @@ export async function restoreFromTrash(ids, roots = skillRoots()) {
     }
 
     let lockRestored = false
-    if (lockRoot && entry.lockEntry && lock.ok) {
+    // Ownership is re-checked here as well: entries written by older builds may
+    // still carry a record copied from a lock that never governed this root.
+    if (lockRoot && entry.lockEntry && lock.ok && ownsLock(root, lockRoot.lock)) {
       const data = lock.data || { version: 3, skills: {} }
       const skills = Object.assign({}, data.skills || {})
       if (!Object.hasOwn(skills, entry.name)) {
@@ -444,9 +477,11 @@ export async function removeSkills(names, roots = skillRoots(), options = {}) {
   }
 
   for (const entry of located) {
+    // Only the root that owns the lock may read or prune its record.
+    const owner = ownsLock(entry.found.root, lockPath)
     try {
       if (mode === 'trash') {
-        const original = lockEntryOf(lock.data, entry.name)
+        const original = owner ? lockEntryOf(lock.data, entry.name) : null
         await moveToTrash(entry.name, entry.found, original)
         results.push({ name: entry.name, ok: true, dir: entry.found.dir, trashed: true })
       } else {
@@ -454,7 +489,7 @@ export async function removeSkills(names, roots = skillRoots(), options = {}) {
         results.push({ name: entry.name, ok: true, dir: entry.found.dir })
       }
       deleted.push(entry.name)
-      prunable.push(entry.name)
+      if (owner) prunable.push(entry.name)
     } catch (error) {
       results.push({ name: entry.name, ok: false, reason: (error && error.code) || 'delete-failed' })
     }

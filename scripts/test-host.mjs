@@ -267,6 +267,87 @@ test('restoring an unregistered skill never touches the lock file', async () => 
   assert.equal((await fs.stat(lock)).mtimeMs, beforeStat.mtimeMs)
 })
 
+test('treats a lock whose skills field is not an object as unreadable', async () => {
+  const { home, skills, roots } = await makeHome()
+  const lock = path.join(home, '.agents', '.skill-lock.json')
+  await fs.writeFile(lock, JSON.stringify({ version: 3, skills: [] }), 'utf8')
+
+  const result = await removeSkills(['alpha'], roots, { confirm: CONFIRM_TOKEN })
+  assert.equal(result.ok, false)
+  assert.equal(result.aborted, 'lock-unreadable')
+  assert.ok(await fs.stat(path.join(skills, 'alpha')))
+})
+
+test('never prunes a lock record that belongs to another root', async () => {
+  const { home, roots } = await makeHome()
+  // The same name exists under ~/.dsh/skills only, while ~/.agents/.skill-lock.json
+  // registers a skill of that name under ~/.agents/skills.
+  await fs.rm(path.join(home, '.agents', 'skills', 'alpha'), { recursive: true, force: true })
+  const other = path.join(home, '.dsh', 'skills', 'alpha')
+  await fs.mkdir(other, { recursive: true })
+  await fs.writeFile(path.join(other, 'SKILL.md'), '---\nname: alpha\n---\n')
+  const lock = await writeLock(home, { alpha: ENTRY() })
+  const before = await fs.readFile(lock, 'utf8')
+
+  const reviewed = await preview(['alpha'], roots)
+  assert.equal(reviewed.items[0].allowed, true)
+  assert.equal(reviewed.items[0].root, 'dsh-skills')
+  assert.equal(reviewed.items[0].lockRegistered, false, 'the lock belongs to the other root')
+
+  const result = await removeSkills(['alpha'], roots, { confirm: CONFIRM_TOKEN })
+  assert.equal(result.ok, true)
+  assert.deepEqual(result.lockRemoved, [])
+  assert.equal(result.lockChanged, false)
+  assert.equal(await fs.readFile(lock, 'utf8'), before)
+  const entry = (await listTrash(roots)).items[0]
+  assert.equal(entry.lockEntry, null, 'no foreign record travels with the entry')
+
+  const restored = await restoreFromTrash([entry.id], roots)
+  assert.equal(restored.results[0].ok, true)
+  assert.equal(restored.results[0].lockRestored, false)
+  assert.equal(await fs.readFile(lock, 'utf8'), before)
+  assert.ok(await fs.stat(path.join(other, 'SKILL.md')))
+})
+
+test('ignores trash entries whose manifest names an invalid skill', async () => {
+  const { home, roots } = await makeHome()
+  const trashRoot = trashRootOf(roots[0])
+  const bad = path.join(trashRoot, 'bad')
+  await fs.mkdir(path.join(bad, 'payload'), { recursive: true })
+  await fs.writeFile(path.join(bad, 'meta.json'), JSON.stringify({
+    version: 1, id: 'bad', name: '../../escape', rootId: 'agents', rootDir: roots[0].dir
+  }), 'utf8')
+
+  const listed = await listTrash(roots)
+  assert.equal(listed.ok, true)
+  assert.equal(listed.count, 0, 'a manifest outside the skill roots must not be listed')
+  assert.ok(await fs.stat(path.join(bad, 'meta.json')))
+})
+
+test('reports a missing trash payload instead of throwing', async () => {
+  const { home, roots } = await makeHome()
+  const id = 'ghost-entry'
+  const entryDir = path.join(trashRootOf(roots[0]), id)
+  await fs.mkdir(entryDir, { recursive: true })
+  await fs.writeFile(path.join(entryDir, 'meta.json'), JSON.stringify({
+    version: 1, id, name: 'ghost', rootId: 'agents', rootDir: roots[0].dir,
+    originalDir: path.join(roots[0].dir, 'ghost'), trashedAt: Date.now(), lockEntry: null
+  }), 'utf8')
+
+  const listed = await listTrash(roots)
+  assert.equal(listed.count, 1)
+
+  const restored = await restoreFromTrash([id], roots)
+  assert.equal(restored.ok, true)
+  assert.equal(restored.results[0].ok, false)
+  assert.equal(restored.results[0].reason, 'payload-missing')
+  assert.equal((await listTrash(roots)).count, 1, 'the entry stays so it can be purged')
+
+  const purged = await purgeTrash([id], roots)
+  assert.equal(purged.results[0].ok, true)
+  assert.equal((await listTrash(roots)).count, 0)
+})
+
 test('rolls the files back into the trash when the lock write fails', async () => {
   const { home, skills, roots } = await makeHome()
   const lock = await writeLock(home, { alpha: ENTRY() })

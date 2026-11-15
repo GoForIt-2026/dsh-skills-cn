@@ -41,10 +41,10 @@ This plugin puts Chinese and English side by side: Chinese name on the left, the
 
 There is **no per-row delete button**. Deletion only happens like this:
 
-1. Click **Delete skills** in the toolbar — rows turn into checkboxes, and double-click / `Enter` / *Insert* / edit are disabled for the duration.
+1. Click **Delete skills** in the toolbar — rows turn into checkboxes, and double-click / `Enter` / `↑` `↓` / *Insert* / edit are disabled for the duration.
 2. Tick the skills. Only skills inside a user-owned root can be ticked: `~/.agents/skills`, `~/.dsh/skills`, `~/.dsh/agent-skills`. Skills provided by npm, the DSH market or a preset are greyed out — deleting a `node_modules` folder by hand breaks the package, so the panel refuses.
 3. Click **Delete selected…**; the dialog lists every target with its Chinese name, English id, full path, file count/size and lock status.
-4. Type **DELETE** (删除 in Chinese) before the confirm button enables.
+4. Type **DELETE** (删除 in Chinese) before the confirm button enables. While a dialog is open it owns the keyboard: typing there — including `Enter` — never writes into the composer, and `Esc` closes it.
 
 ### Trash (default, recoverable)
 
@@ -59,10 +59,12 @@ Unchecking the box performs the permanent deletion described above, with a red w
 ### How the lock file is handled
 
 - Both modes remove registered names from `~/.agents/.skill-lock.json`, written atomically while keeping `version`, `dismissed` and unknown fields.
+- **A record only belongs to a skill in the same root as the lock**: the lock governs `~/.agents/skills`. Deleting a same-named skill in `~/.dsh/skills` or `~/.dsh/agent-skills` never touches the `~/.agents` registration, and the trash entry does not carry someone else's record either (restore re-checks ownership, including entries written by 1.4.0–1.4.2).
 - Skills that were never registered leave the lock file **byte-identical**.
 - Restoring writes the record back when the skill is absent from the lock; an existing record is never duplicated.
-- If the lock cannot be parsed, the whole request aborts before any file is moved — so you never end up with files gone and a stale registration.
-- Symlinked directories, names containing path separators, and already-missing directories are skipped per item with a reason.
+- If the lock cannot be parsed (including a `skills` field that is not an object), the whole request aborts before any file is moved — so you never end up with files gone and a stale registration.
+- A directory that is **already gone** while the lock still registers it only has that record cleaned; it is not reported as a failed deletion.
+- Symlinked directories and names containing path separators are skipped per item with a reason.
 
 Deletion needs the plugin's **host half** (the browser cannot touch the filesystem). Without it the button reports that deletion is unavailable and everything else keeps working.
 
@@ -116,7 +118,7 @@ Open **Settings → Plugins** and make sure the “Skill manager (Chinese)” ro
 4. `↑` / `↓` to move, `Enter` to insert — or double-click a row, or click **Insert**.
 5. The composer now holds `/api-and-interface-design`; write your request after it and press Enter yourself.
 6. To edit the Chinese text, use ✎ on the row (or the button in the expanded area). Clear usage records from the footer.
-7. `Esc` clears the search; `▸` expands the English source and the skill path.
+7. `Esc` clears the search (or closes the open dialog first); `▸` expands the English source and the skill path.
 
 ## Where the skill entries come from
 

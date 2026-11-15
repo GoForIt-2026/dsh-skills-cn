@@ -31,7 +31,7 @@ window.__ModuleLoader__.load({
       sortLabel: '排序',
       sortUsage: '常用优先',
       sortName: '名称字母序',
-      sortSource: '按来源分组',
+      sortSource: '按来源排序',
       refresh: '刷新',
       colName: '中文名称',
       colEn: '英文标识',
@@ -117,6 +117,9 @@ window.__ModuleLoader__.load({
       deleteUnavailable: '删除服务不可用：需要插件的 Host 半边生效并重启 DSH',
       deleteNoSelection: '先勾选要删除的技能',
       deletePreviewFailed: '读取删除预览失败',
+      deleteLockWriteFailed: '技能目录已处理，但 .skill-lock.json 写入失败，注册记录可能残留。请检查锁文件权限后重试。',
+      deleteMissingOnly: '选中的目录都已不存在，只清理了 {n} 条 skill-lock 记录',
+      deleteGoneNow: '选中的目录都已不存在，没有文件被删除',
       reasonMissing: '目录已不存在（仅清理锁记录）',
       reasonManaged: '托管安装，不能在此删除',
       reasonSymlink: '符号链接，已跳过',
@@ -138,8 +141,11 @@ window.__ModuleLoader__.load({
       trashRestoredLock: '已恢复 {n} 个技能（含 skill-lock 记录）',
       reasonTargetExists: '目标目录已存在，未覆盖',
       reasonLockWrite: 'skill-lock 写入失败，文件已退回回收站',
+      reasonPayloadMissing: '回收站里的文件已丢失，只能彻底删除该条目',
+      reasonPayloadUnsafe: '回收站条目不是普通目录，已跳过',
       reasonEntryGone: '回收站条目已不存在',
       trashPurged: '已彻底删除 {n} 项',
+      trashPurgedPart: '已彻底删除 {n} 项，{k} 项失败',
       trashFailed: '操作失败',
       trashAt: '{time} 移除',
       trashKeep: '先移到回收站（可恢复）',
@@ -164,7 +170,7 @@ window.__ModuleLoader__.load({
       sortLabel: 'Sort',
       sortUsage: 'Most used',
       sortName: 'Name A→Z',
-      sortSource: 'Group by source',
+      sortSource: 'Source order',
       refresh: 'Refresh',
       colName: 'Chinese name',
       colEn: 'English name',
@@ -250,6 +256,9 @@ window.__ModuleLoader__.load({
       deleteUnavailable: 'Deletion unavailable: the plugin host half must be active — reinstall and restart DSH',
       deleteNoSelection: 'Tick the skills to delete first',
       deletePreviewFailed: 'Could not read the deletion preview',
+      deleteLockWriteFailed: 'The skill directories were handled, but writing .skill-lock.json failed — a registration may still be there. Check the lock file and retry.',
+      deleteMissingOnly: 'Those directories were already gone; only {n} skill-lock record(s) were cleaned',
+      deleteGoneNow: 'Those directories were already gone — no files were deleted',
       reasonMissing: 'Directory is already gone (lock cleaned only)',
       reasonManaged: 'Managed install — delete it through its package manager',
       reasonSymlink: 'Symlink skipped',
@@ -271,8 +280,11 @@ window.__ModuleLoader__.load({
       trashRestoredLock: 'Restored {n} skills with their skill-lock records',
       reasonTargetExists: 'the target directory already exists — nothing was overwritten',
       reasonLockWrite: 'skill-lock write failed; the files went back to the trash',
+      reasonPayloadMissing: 'the files are missing from the trash — purge the entry instead',
+      reasonPayloadUnsafe: 'the trash entry is not a plain directory — skipped',
       reasonEntryGone: 'the trash entry no longer exists',
       trashPurged: 'Permanently deleted {n} items',
+      trashPurgedPart: 'Permanently deleted {n} items, {k} failed',
       trashFailed: 'The action failed',
       trashAt: 'removed {time}',
       trashKeep: 'Move to the trash first (recoverable)',
@@ -475,7 +487,10 @@ window.__ModuleLoader__.load({
       }
       try {
         if (typeof navigator !== 'undefined' && navigator.clipboard && typeof name === 'string') {
-          navigator.clipboard.writeText('/' + name);
+          // `writeText` rejects when the document is not focused; that must not
+          // become an unhandled rejection in the console.
+          const written = navigator.clipboard.writeText('/' + name);
+          if (written && typeof written.catch === 'function') written.catch(function () {});
           return { how: 'clipboard' };
         }
       } catch (error) { /* reported as failure */ }
@@ -866,7 +881,12 @@ window.__ModuleLoader__.load({
         data = null;
       }
       if (!response.ok || !data || data.ok === false) {
-        return { ok: false, reason: (data && (data.reason || data.aborted)) || ('http-' + response.status) };
+        // Keep the payload (`results`, `aborted`, `lockPath`) so callers can name
+        // per-item failures instead of showing one generic reason.
+        return Object.assign({}, data || {}, {
+          ok: false,
+          reason: (data && (data.reason || data.aborted)) || ('http-' + response.status)
+        });
       }
       return data;
     }
@@ -931,6 +951,7 @@ window.__ModuleLoader__.load({
       const rootRef = useRef(null);
       const toastTimer = useRef(0);
       const lastInsert = useRef(null);
+      const deleteSeq = useRef(0);
 
       // Restore the persisted Chinese overrides, usage counters and view state.
       useEffect(function () {
@@ -1015,8 +1036,12 @@ window.__ModuleLoader__.load({
                   if (typeof meta.provider === 'string' && meta.provider) next[i].provider = meta.provider;
                   if (typeof meta.source === 'string' && meta.source) next[i].source = meta.source;
                   const base = meta.resourceBase;
-                  if (base && base.kind === 'directory' && base.path) next[i].dir = base.path;
-                  else if (typeof meta.path === 'string' && meta.path) next[i].dir = dirOf(meta.path);
+                  const baseDir = base && base.kind === 'directory' && base.path ? base.path : '';
+                  // The registry knows both halves — the skill file and the directory
+                  // holding it — so a Remote row that dropped `path` stays deletable.
+                  if (typeof meta.path === 'string' && meta.path) next[i].path = meta.path;
+                  if (baseDir) next[i].dir = baseDir;
+                  else if (next[i].path) next[i].dir = dirOf(next[i].path);
                   next[i].group = groupFor(next[i].source, meta.path || next[i].path);
                 }
               }
@@ -1055,8 +1080,21 @@ window.__ModuleLoader__.load({
         return function () { alive = false; };
       }, []);
 
+      /** Deletable = the registry put it under an allowed root (path, or its dir when path is missing). */
       const rowDeletable = function (row) {
-        return ownerRoot(roots, row && row.path) !== null;
+        if (!row) return false;
+        // The registry reports the skill file; the directory is the fallback when a
+        // build drops `path`, so a known directory never looks "managed".
+        return ownerRoot(roots, row.path) !== null || ownerRoot(roots, row.dir) !== null;
+      };
+
+      /** A registered name whose directory is gone: only its lock record can be cleaned. */
+      const cleanableItem = function (item) {
+        return !!item && item.allowed !== true && item.reason === 'missing' && item.lockRegistered === true;
+      };
+
+      const actionableItem = function (item) {
+        return !!item && (item.allowed === true || cleanableItem(item));
       };
 
       const refreshTrash = function () {
@@ -1077,7 +1115,8 @@ window.__ModuleLoader__.load({
         const result = await hostCall('/trash-restore', { ids: [id] });
         setTrashBusy(false);
         if (result.ok === false) {
-          flash(result.aborted === 'lock-unreadable' ? t('reasonLockUnreadable') : t('trashFailed'), false);
+          const aborted = result.reason === 'lock-unreadable' || result.aborted === 'lock-unreadable';
+          flash(aborted ? t('reasonLockUnreadable') : t('trashFailed'), false);
           return;
         }
         const rows = result.results || [];
@@ -1087,8 +1126,10 @@ window.__ModuleLoader__.load({
           const first = failed[0];
           const reason = first.reason === 'target-exists' ? t('reasonTargetExists')
             : first.reason === 'lock-write-failed' ? t('reasonLockWrite')
-              : first.reason === 'not-found' ? t('reasonEntryGone')
-                : String(first.reason || '');
+              : first.reason === 'payload-missing' ? t('reasonPayloadMissing')
+                : first.reason === 'payload-unsafe' ? t('reasonPayloadUnsafe')
+                  : first.reason === 'not-found' ? t('reasonEntryGone')
+                    : String(first.reason || '');
           flash(t('trashFailed') + '：' + (first.name || '') + ' · ' + reason, false);
         } else {
           const lockWritten = done.some(function (item) { return item.lockRestored; });
@@ -1103,27 +1144,33 @@ window.__ModuleLoader__.load({
         setTrashBusy(true);
         const result = await hostCall('/trash-purge', { ids: [id] });
         setTrashBusy(false);
-        if (result.ok === false) {
+        const purged = result.ok === false ? 0 : (result.results || []).filter(function (item) { return item.ok; }).length;
+        const failed = result.ok === false ? 1 : (result.results || []).length - purged;
+        if (purged > 0) {
+          flash(failed > 0 ? t('trashPurgedPart', { n: purged, k: failed }) : t('trashPurged', { n: purged }), failed === 0);
+        } else {
           flash(t('trashFailed'), false);
-          return;
         }
-        flash(t('trashPurged', { n: 1 }), true);
         refreshTrash();
       };
 
       const purgeAllTrash = async function () {
-        if (trashBusy || trash.length === 0) return;
+        if (trashBusy) return;
+        setTrashConfirmAll(false);
+        if (trash.length === 0) return;
         setTrashBusy(true);
         const result = await hostCall('/trash-purge', {
           ids: trash.map(function (item) { return item.id; })
         });
         setTrashBusy(false);
-        setTrashConfirmAll(false);
-        if (result.ok === false) {
+        const rows = result.ok === false ? [] : (result.results || []);
+        const purged = rows.filter(function (item) { return item.ok; }).length;
+        const failed = result.ok === false ? trash.length : rows.length - purged;
+        if (purged > 0) {
+          flash(failed > 0 ? t('trashPurgedPart', { n: purged, k: failed }) : t('trashPurged', { n: purged }), failed === 0);
+        } else {
           flash(t('trashFailed'), false);
-          return;
         }
-        flash(t('trashPurged', { n: trash.length }), true);
         refreshTrash();
       };
 
@@ -1166,8 +1213,12 @@ window.__ModuleLoader__.load({
           flash(t('deleteNoSelection'), false);
           return;
         }
+        const seq = deleteSeq.current + 1;
+        deleteSeq.current = seq;
         setDeleteState({ items: null, lock: null, text: '', busy: true, error: null, results: null, mode: 'trash' });
         const result = await hostCall('/preview', { names: picked });
+        // The dialog may have been dismissed while the preview was in flight.
+        if (deleteSeq.current !== seq) return;
         if (result.ok === false) {
           setDeleteState({
             items: null, lock: null, text: '', busy: false, results: null, mode: 'trash',
@@ -1182,17 +1233,20 @@ window.__ModuleLoader__.load({
       };
 
       const closeDelete = function () {
+        deleteSeq.current += 1;
         setDeleteState(null);
       };
 
       const runDelete = async function () {
         const state = deleteState;
         if (!state || !state.items || state.busy) return;
-        const allowed = state.items.filter(function (item) { return item.allowed; }).map(function (item) { return item.name; });
-        if (allowed.length === 0) return;
+        // Skills whose directory is already gone still get their stale lock record
+        // cleaned out, otherwise the promise in the dialog would be a lie.
+        const names = state.items.filter(actionableItem).map(function (item) { return item.name; });
+        if (names.length === 0) return;
         setDeleteState(Object.assign({}, state, { busy: true, error: null }));
         const mode = state.mode === 'purge' ? 'purge' : 'trash';
-        const result = await hostCall('/delete', { names: allowed, confirm: 'DELETE', mode: mode });
+        const result = await hostCall('/delete', { names: names, confirm: 'DELETE', mode: mode });
         if (result.ok === false) {
           setDeleteState(Object.assign({}, state, {
             busy: false,
@@ -1218,18 +1272,31 @@ window.__ModuleLoader__.load({
           setSelected(function (current) { return removedNames.indexOf(current) >= 0 ? '' : current; });
         }
 
-        const failed = (result.results || []).filter(function (item) { return !item.ok; }).length;
+        // A directory that vanished before the request is a lock cleanup, not a
+        // failure: the skill is gone either way.
+        const missingItems = (result.results || [])
+          .filter(function (item) { return !item.ok && item.reason === 'missing'; });
+        const failedItems = (result.results || [])
+          .filter(function (item) { return !item.ok && item.reason !== 'missing'; });
+        const failed = failedItems.length;
         const lockCount = (result.lockRemoved || []).length;
         const trashedCount = (result.trashed || []).length;
-        let message = mode === 'trash'
-          ? t('trashedOk', { n: trashedCount })
-          : t('deletedOk', { n: removedNames.length });
-        if (lockCount > 0) {
-          message += mode === 'trash'
-            ? t('trashedLockPart', { m: lockCount })
-            : t('deletedLockPart', { m: lockCount });
+        const doneCount = mode === 'trash' ? trashedCount : removedNames.length;
+        const onlyMissing = doneCount === 0 && failedItems.length === 0 && missingItems.length > 0;
+        let message;
+        if (onlyMissing) {
+          message = lockCount > 0 ? t('deleteMissingOnly', { n: lockCount }) : t('deleteGoneNow');
+        } else {
+          message = mode === 'trash'
+            ? t('trashedOk', { n: trashedCount })
+            : t('deletedOk', { n: removedNames.length });
+          if (lockCount > 0) {
+            message += mode === 'trash'
+              ? t('trashedLockPart', { m: lockCount })
+              : t('deletedLockPart', { m: lockCount });
+          }
+          if (failed > 0) message += t('deletedFailPart', { k: failed });
         }
-        if (failed > 0) message += t('deletedFailPart', { k: failed });
         flash(message, failed === 0);
 
         setBatch(false);
@@ -1244,7 +1311,7 @@ window.__ModuleLoader__.load({
         && !deleteState.busy
         && !!deleteState.items
         && deleteState.text.trim() === deleteWord
-        && deleteState.items.some(function (item) { return item.allowed; });
+        && deleteState.items.some(actionableItem);
 
       const persistCache = function (next) {
         setCache(next);
@@ -1452,7 +1519,23 @@ window.__ModuleLoader__.load({
         flash(t('resetDone'), true);
       };
 
+      // A dialog owns the keyboard while it is open.
+      const modalOpen = !!editing || !!confirmReset || !!deleteState || !!trashOpen;
+
       const onKeyDown = function (event) {
+        if (modalOpen) {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            if (editing) setEditing(null);
+            else if (confirmReset) setConfirmReset(false);
+            else if (trashOpen) { setTrashOpen(false); setTrashConfirmAll(false); }
+            else if (deleteState && !deleteState.busy) closeDelete();
+          }
+          // Typing “删除 / DELETE” or Enter inside a dialog must never reach the
+          // composer behind it.
+          return;
+        }
+        if (batch) return; // selection mode: ticks only, no insert, no navigation
         if (!paged.length) return;
         const index = paged.findIndex(function (row) { return row.name === selected; });
         if (event.key === 'ArrowDown') {
@@ -1694,9 +1777,9 @@ window.__ModuleLoader__.load({
             cells.push(batch
               ? h('span', {
                   key: 'x',
-                  style: S.tag(deletable === false),
+                  style: S.providerCell,
                   title: deletable ? undefined : t('notDeletable')
-                }, t('batch'))
+                }, row.provider || row.source || t('noProvider'))
               : (isHover || isSelected)
                 ? h('div', { key: 'x', style: S.actions },
                     h('button', {
@@ -1917,14 +2000,14 @@ window.__ModuleLoader__.load({
         )
       ) : null;
 
-      const deleteAllowed = deleteState && deleteState.items
-        ? deleteState.items.filter(function (item) { return item.allowed; })
+      const deleteActionable = deleteState && deleteState.items
+        ? deleteState.items.filter(actionableItem)
         : [];
-      const deleteLocked = deleteAllowed.filter(function (item) { return item.lockRegistered; }).length;
+      const deleteLocked = deleteActionable.filter(function (item) { return item.lockRegistered; }).length;
 
       const deleteModal = deleteState ? h('div', { style: S.scrim, onClick: function () { if (!deleteState.busy) closeDelete(); } },
         h('div', { style: S.modal, onClick: function (event) { event.stopPropagation(); } },
-          h('div', { style: S.modalTitle }, t('deleteTitle', { n: deleteAllowed.length || picked.length })),
+          h('div', { style: S.modalTitle }, t('deleteTitle', { n: deleteActionable.length || picked.length })),
           h('div', { style: S.modalBody },
             deleteState.mode === 'purge' ? t('deleteBody') : t('deleteBodyTrash')),
           deleteState.busy && !deleteState.items
@@ -1936,12 +2019,15 @@ window.__ModuleLoader__.load({
                   ? t('deleteUnavailable')
                   : deleteState.error === 'lock-unreadable'
                     ? t('reasonLockUnreadable')
-                    : t('deletePreviewFailed'))
+                    : deleteState.error === 'lock-write-failed'
+                      ? t('deleteLockWriteFailed')
+                      : t('deletePreviewFailed'))
             : null,
           deleteState.items && deleteState.items.length > 0
             ? h('div', { style: S.modalList },
                 deleteState.items.map(function (item) {
                   const failed = deleteState.results && deleteState.results.find(function (result) { return result.name === item.name; });
+                  const pending = actionableItem(item);
                   const reason = failed && failed.ok === false
                     ? (failed.reason === 'missing' ? t('reasonMissing')
                       : failed.reason === 'symlink' ? t('reasonSymlink')
@@ -1951,7 +2037,7 @@ window.__ModuleLoader__.load({
                       ? (item.reason === 'missing' ? t('reasonMissing') : t('reasonManaged'))
                       : null);
                   return h('div', { key: item.name, style: S.modalItem },
-                    h('span', { style: S.modalItemName }, (item.allowed ? '' : '⛔ ') + item.name),
+                    h('span', { style: S.modalItemName }, (pending ? '' : '⛔ ') + item.name),
                     item.allowed
                       ? h('span', { style: S.modalItemPath }, item.dir)
                       : null,
@@ -1967,7 +2053,7 @@ window.__ModuleLoader__.load({
             : null,
           deleteState.items && deleteState.items.length > 0
             ? h('div', { style: S.resultLine },
-                deleteLocked > 0 ? t('deleteLockNote', { n: deleteLocked }) : t('deleteNoLockNote', { n: deleteAllowed.length }))
+                deleteLocked > 0 ? t('deleteLockNote', { n: deleteLocked }) : t('deleteNoLockNote', { n: deleteActionable.length }))
             : null,
           deleteState.items && deleteState.items.length > 0
             ? h('label', {
@@ -1991,7 +2077,7 @@ window.__ModuleLoader__.load({
           deleteState.mode === 'purge'
             ? h('div', { style: S.warn }, t('trashHardWarn'))
             : null,
-          deleteAllowed.length > 0
+          deleteActionable.length > 0
             ? h('div', { style: S.field },
                 h('span', { style: S.fieldLabel }, t('deleteTypeHint', { word: deleteWord })),
                 h('input', {
