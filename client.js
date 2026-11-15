@@ -135,6 +135,10 @@ window.__ModuleLoader__.load({
       trashPurgeAll: '清空回收站',
       trashPurgeAllConfirm: '彻底删除回收站里的 {n} 项？删除后无法恢复。',
       trashRestored: '已恢复 {n} 个技能',
+      trashRestoredLock: '已恢复 {n} 个技能（含 skill-lock 记录）',
+      reasonTargetExists: '目标目录已存在，未覆盖',
+      reasonLockWrite: 'skill-lock 写入失败，文件已退回回收站',
+      reasonEntryGone: '回收站条目已不存在',
       trashPurged: '已彻底删除 {n} 项',
       trashFailed: '操作失败',
       trashAt: '{time} 移除',
@@ -264,6 +268,10 @@ window.__ModuleLoader__.load({
       trashPurgeAll: 'Empty the trash',
       trashPurgeAllConfirm: 'Permanently delete all {n} items in the trash? This cannot be undone.',
       trashRestored: 'Restored {n} skills',
+      trashRestoredLock: 'Restored {n} skills with their skill-lock records',
+      reasonTargetExists: 'the target directory already exists — nothing was overwritten',
+      reasonLockWrite: 'skill-lock write failed; the files went back to the trash',
+      reasonEntryGone: 'the trash entry no longer exists',
       trashPurged: 'Permanently deleted {n} items',
       trashFailed: 'The action failed',
       trashAt: 'removed {time}',
@@ -1069,12 +1077,23 @@ window.__ModuleLoader__.load({
         const result = await hostCall('/trash-restore', { ids: [id] });
         setTrashBusy(false);
         if (result.ok === false) {
-          flash(t('trashFailed'), false);
+          flash(result.aborted === 'lock-unreadable' ? t('reasonLockUnreadable') : t('trashFailed'), false);
           return;
         }
-        const done = (result.results || []).filter(function (item) { return item.ok; }).length;
-        const failed = (result.results || []).filter(function (item) { return !item.ok; }).length;
-        flash(failed ? t('trashFailed') : t('trashRestored', { n: done }), failed === 0);
+        const rows = result.results || [];
+        const done = rows.filter(function (item) { return item.ok; });
+        const failed = rows.filter(function (item) { return !item.ok; });
+        if (failed.length > 0) {
+          const first = failed[0];
+          const reason = first.reason === 'target-exists' ? t('reasonTargetExists')
+            : first.reason === 'lock-write-failed' ? t('reasonLockWrite')
+              : first.reason === 'not-found' ? t('reasonEntryGone')
+                : String(first.reason || '');
+          flash(t('trashFailed') + '：' + (first.name || '') + ' · ' + reason, false);
+        } else {
+          const lockWritten = done.some(function (item) { return item.lockRestored; });
+          flash(lockWritten ? t('trashRestoredLock', { n: done.length }) : t('trashRestored', { n: done.length }), true);
+        }
         refreshTrash();
         setAttempt(attempt + 1);
       };

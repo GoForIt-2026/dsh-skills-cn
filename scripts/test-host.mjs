@@ -249,3 +249,48 @@ test('mode purge deletes without leaving a trash entry', async () => {
   assert.deepEqual(result.deleted, ['beta'])
   assert.equal((await listTrash(roots)).count, 0)
 })
+
+test('restoring an unregistered skill never touches the lock file', async () => {
+  const { home, roots } = await makeHome()
+  const lock = await writeLock(home, { alpha: ENTRY() })
+  await removeSkills(['beta'], roots, { confirm: CONFIRM_TOKEN })
+  const before = await fs.readFile(lock, 'utf8')
+  const beforeStat = await fs.stat(lock)
+  const listed = await listTrash(roots)
+  assert.equal(listed.count, 1)
+  assert.equal(listed.items[0].lockEntry, null)
+
+  const restored = await restoreFromTrash([listed.items[0].id], roots)
+  assert.equal(restored.results[0].ok, true)
+  assert.equal(restored.results[0].lockRestored, false)
+  assert.equal(await fs.readFile(lock, 'utf8'), before)
+  assert.equal((await fs.stat(lock)).mtimeMs, beforeStat.mtimeMs)
+})
+
+test('rolls the files back into the trash when the lock write fails', async () => {
+  const { home, skills, roots } = await makeHome()
+  const lock = await writeLock(home, { alpha: ENTRY() })
+  await removeSkills(['alpha'], roots, { confirm: CONFIRM_TOKEN })
+  const listed = await listTrash(roots)
+  assert.equal(listed.count, 1)
+  const entryId = listed.items[0].id
+
+  // A read-only lock makes both the atomic rename and the writeFile fallback fail.
+  await fs.chmod(lock, 0o444)
+  const restored = await restoreFromTrash([entryId], roots)
+  assert.equal(restored.ok, true)
+  assert.equal(restored.results[0].ok, false)
+  assert.equal(restored.results[0].reason, 'lock-write-failed')
+  await assert.rejects(fs.stat(path.join(skills, 'alpha')))
+  assert.equal((await listTrash(roots)).count, 1)
+  const untouched = JSON.parse(await fs.readFile(lock, 'utf8'))
+  assert.deepEqual(Object.keys(untouched.skills), [])
+
+  await fs.chmod(lock, 0o644)
+  const retry = await restoreFromTrash([entryId], roots)
+  assert.equal(retry.results[0].ok, true)
+  assert.equal(retry.results[0].lockRestored, true)
+  const final = JSON.parse(await fs.readFile(lock, 'utf8'))
+  assert.deepEqual(Object.keys(final.skills), ['alpha'])
+  assert.equal((await listTrash(roots)).count, 0)
+})

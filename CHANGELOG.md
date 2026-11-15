@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-11-16
+
+### Fixed
+
+- Restoring a trashed skill writes its `.skill-lock.json` record back **before** the trash entry is
+  discarded. If that write fails, the restored directory is moved back into the trash entry instead of
+  being left on disk with a missing registration, and the failure is reported per skill
+  (`lock-write-failed`) so the operation can be retried. Unregistered skills still never touch the lock.
+- The restore toast now distinguishes “restored with skill-lock record” from a plain restore, and names
+  the failing skill with its reason (`target-exists`, `lock-write-failed`, `not-found`).
+- New host test covers the rollback: a read-only lock makes restore fail, the files return to the trash,
+  and a retry after the lock is writable succeeds.
+
 ## [1.4.0] - 2026-11-15
 
 ### Changed

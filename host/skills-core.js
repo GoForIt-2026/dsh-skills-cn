@@ -354,11 +354,24 @@ export async function restoreFromTrash(ids, roots = skillRoots()) {
       const skills = Object.assign({}, data.skills || {})
       if (!Object.hasOwn(skills, entry.name)) {
         skills[entry.name] = entry.lockEntry
-        lock.data = Object.assign({}, data, { skills })
+        const next = Object.assign({}, data, { skills })
         try {
-          await writeLockAtomic(lockRoot.lock, lock.data)
+          await writeLockAtomic(lockRoot.lock, next)
+          lock.data = next
           lockRestored = true
-        } catch (error) { /* the files are back; report the lock separately */ }
+        } catch (error) {
+          // The registry is the half we cannot leave stale: put the files back
+          // into the trash entry and keep it, so the user can retry.
+          await fs.rename(target, path.join(entry.entryDir, entry.name)).catch(() => {})
+          results.push({
+            id,
+            ok: false,
+            name: entry.name,
+            reason: 'lock-write-failed',
+            lockError: (error && error.code) || 'lock-write-failed'
+          })
+          continue
+        }
       }
     }
     await fs.rm(entry.entryDir, { recursive: true, force: true }).catch(() => {})
