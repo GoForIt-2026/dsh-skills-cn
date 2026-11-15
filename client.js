@@ -52,7 +52,7 @@ window.__ModuleLoader__.load({
       clear: '清空搜索与筛选',
       total: '共 {n} 个技能',
       countInGroup: '共 {n} 个',
-      readonly: '只读 · 不会修改任何技能文件',
+      readonly: '只读浏览 · 删除需在批量模式二次确认',
       untranslated: '未收录中文',
       hint: '↑↓ 选择 · Enter 插入 · / 搜索',
       usedN: '已用 {n} 次',
@@ -84,7 +84,41 @@ window.__ModuleLoader__.load({
       pagerNext: '下一页',
       pagerInfo: '共 {n} 项 · 第 {page}/{pages} 页',
       noDesc: '暂无描述',
-      other: '其他'
+      other: '其他',
+      batch: '批量删除',
+      batchTip: '进入批量模式：勾选技能后一次性真实删除',
+      exitBatch: '退出批量',
+      pickedN: '已选 {n} 个',
+      pickedDeletable: '可删除 {m} 个',
+      selectPage: '全选本页可删除',
+      clearPicked: '清空选择',
+      deleteSelected: '删除选中…',
+      notDeletable: '由 npm / 市场 / 预设提供，请用对应包管理器卸载',
+      deleteTitle: '删除 {n} 个技能？',
+      deleteBody: '以下目录与文件会被永久删除，无法撤销。',
+      deleteLockNote: '其中 {n} 个在 .skill-lock.json 里注册，删除时会同步移除这些记录。',
+      deleteNoLockNote: '这 {n} 个都不在 .skill-lock.json 里注册，删除时不会改动锁文件。',
+      deleteTypeHint: '输入「{word}」以启用确认按钮',
+      deleteTypeWord: '删除',
+      deleteGo: '确认删除',
+      deleting: '正在删除…',
+      deleteCancel: '取消',
+      deletedOk: '已删除 {n} 个技能',
+      deletedLockPart: '，skill-lock 移除 {m} 条',
+      deletedFailPart: '，失败 {k} 个',
+      deleteUnavailable: '删除服务不可用：需要 1.2.0 的 Host 半边并重启 DSH',
+      deleteNoSelection: '先勾选要删除的技能',
+      deletePreviewFailed: '读取删除预览失败',
+      reasonMissing: '目录已不存在（仅清理锁记录）',
+      reasonManaged: '托管安装，不能在此删除',
+      reasonSymlink: '符号链接，已跳过',
+      reasonOutside: '不在允许的技能目录内',
+      reasonInvalid: '名称不合法',
+      reasonLockUnreadable: 'skill-lock 无法解析，已中止（未删除任何文件）',
+      lockRegistered: '已注册 skill-lock',
+      lockNotRegistered: '未注册 skill-lock',
+      filesN: '{n} 个文件 · {size}',
+      deleteHint: '删除入口只在批量模式里，行内没有删除按钮'
     };
 
     const en = {
@@ -123,7 +157,7 @@ window.__ModuleLoader__.load({
       clear: 'Clear search and filters',
       total: '{n} skills',
       countInGroup: '{n} in total',
-      readonly: 'Read-only · no skill file is modified',
+      readonly: 'Read-only browsing · deletion needs explicit confirmation',
       untranslated: 'no Chinese entry',
       hint: '↑↓ select · Enter insert · / search',
       usedN: 'used {n}×',
@@ -155,7 +189,41 @@ window.__ModuleLoader__.load({
       pagerNext: 'Next',
       pagerInfo: '{n} items · page {page}/{pages}',
       noDesc: 'No description',
-      other: 'Other'
+      other: 'Other',
+      batch: 'Delete skills',
+      batchTip: 'Selection mode: tick skills to delete them from disk',
+      exitBatch: 'Exit selection',
+      pickedN: '{n} selected',
+      pickedDeletable: '{m} deletable',
+      selectPage: 'Select deletable on this page',
+      clearPicked: 'Clear selection',
+      deleteSelected: 'Delete selected…',
+      notDeletable: 'Provided by npm / the market / a preset — uninstall it there',
+      deleteTitle: 'Delete {n} skills?',
+      deleteBody: 'These directories and files are removed permanently. This cannot be undone.',
+      deleteLockNote: '{n} of them are registered in .skill-lock.json; those entries are removed too.',
+      deleteNoLockNote: 'None of them are registered in .skill-lock.json, so the lock file is left untouched.',
+      deleteTypeHint: 'Type “{word}” to enable the confirm button',
+      deleteTypeWord: 'DELETE',
+      deleteGo: 'Delete permanently',
+      deleting: 'Deleting…',
+      deleteCancel: 'Cancel',
+      deletedOk: '{n} skills deleted',
+      deletedLockPart: ', {m} lock entries removed',
+      deletedFailPart: ', {k} failed',
+      deleteUnavailable: 'Deletion unavailable: needs the 1.2.0 host half — reinstall and restart DSH',
+      deleteNoSelection: 'Tick the skills to delete first',
+      deletePreviewFailed: 'Could not read the deletion preview',
+      reasonMissing: 'Directory is already gone (lock cleaned only)',
+      reasonManaged: 'Managed install — delete it through its package manager',
+      reasonSymlink: 'Symlink skipped',
+      reasonOutside: 'Outside the allowed skill roots',
+      reasonInvalid: 'Invalid name',
+      reasonLockUnreadable: '.skill-lock.json is unreadable, aborted — nothing was deleted',
+      lockRegistered: 'registered in skill-lock',
+      lockNotRegistered: 'not registered',
+      filesN: '{n} files · {size}',
+      deleteHint: 'Deletion only exists in selection mode; there is no per-row delete button'
     };
 
     // Bundled Chinese index for common skill packs: SKILL.md `name` -> [中文名, 中文说明].
@@ -517,6 +585,52 @@ window.__ModuleLoader__.load({
         padding: 0, border: 0, background: 'transparent', cursor: 'pointer',
         color: 'var(--dsw-alias-brand-primary)', fontFamily: 'inherit', fontSize: 'inherit'
       },
+      dangerLink: {
+        padding: 0, border: 0, background: 'transparent', cursor: 'pointer',
+        color: 'var(--dsw-alias-state-error-primary)', fontFamily: 'inherit', fontSize: 'inherit'
+      },
+      batchToggle: {
+        flex: '0 0 auto', height: '32px', padding: '0 10px', borderRadius: '9px',
+        fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit',
+        color: 'var(--dsw-alias-state-error-primary)', background: 'transparent',
+        border: '1px solid var(--dsw-alias-state-error-primary)',
+        display: 'flex', alignItems: 'center', gap: '6px'
+      },
+      batchToggleOn: {
+        flex: '0 0 auto', height: '32px', padding: '0 10px', borderRadius: '9px',
+        fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit',
+        color: '#fff', background: 'var(--dsw-alias-state-error-primary)',
+        border: '1px solid var(--dsw-alias-state-error-primary)',
+        display: 'flex', alignItems: 'center', gap: '6px'
+      },
+      checkbox: {
+        flex: '0 0 auto', width: '14px', height: '14px', margin: '0 2px 0 0',
+        accentColor: 'var(--dsw-alias-brand-primary)', cursor: 'pointer'
+      },
+      batchBar: {
+        display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap',
+        padding: '8px 14px', borderTop: '1px solid var(--dsw-alias-border-l1)',
+        background: 'var(--dsw-alias-bg-base)', fontSize: '11.5px',
+        color: 'var(--dsw-alias-label-secondary)', flex: '0 0 auto'
+      },
+      modalList: {
+        maxHeight: '190px', overflowY: 'auto', display: 'flex', flexDirection: 'column',
+        gap: '6px', border: '1px solid var(--dsw-alias-border-l1)', borderRadius: '8px',
+        padding: '8px'
+      },
+      modalItem: {
+        display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '11.5px',
+        color: 'var(--dsw-alias-label-secondary)'
+      },
+      modalItemName: { fontSize: '12.5px', color: 'var(--dsw-alias-label-primary)', fontWeight: 600 },
+      modalItemPath: { fontFamily: MONO, fontSize: '11px', wordBreak: 'break-all' },
+      warn: {
+        fontSize: '12px', lineHeight: 1.55, padding: '8px 10px', borderRadius: '8px',
+        color: 'var(--dsw-alias-state-error-primary)',
+        background: 'var(--dsw-alias-bg-base)',
+        border: '1px solid var(--dsw-alias-state-error-primary)'
+      },
+      resultLine: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)' },
       state: {
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         gap: '8px', padding: '44px 24px', textAlign: 'center', flex: '1 1 auto'
@@ -585,6 +699,51 @@ window.__ModuleLoader__.load({
       };
     }
 
+    // -------------------------------------------------------------- host bridge
+    const HOST_ROUTE = '/__dsh-skills-cn';
+    const HOST_HEADERS = { 'content-type': 'application/json', 'x-dsh-skills-cn': 'delete' };
+
+    async function hostCall(path, body) {
+      let response;
+      try {
+        response = await fetch(HOST_ROUTE + path, {
+          method: 'POST',
+          headers: HOST_HEADERS,
+          body: JSON.stringify(body || {})
+        });
+      } catch (error) {
+        return { ok: false, reason: 'network' };
+      }
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (error) {
+        data = null;
+      }
+      if (!response.ok || !data || data.ok === false) {
+        return { ok: false, reason: (data && (data.reason || data.aborted)) || ('http-' + response.status) };
+      }
+      return data;
+    }
+
+    /** Which allowed root owns this skill path, or null when it is not deletable here. */
+    function ownerRoot(roots, target) {
+      if (!Array.isArray(roots) || !target) return null;
+      const normalized = String(target).toLowerCase().replace(/\\/g, '/');
+      for (let i = 0; i < roots.length; i++) {
+        const dir = String(roots[i].dir || '').toLowerCase().replace(/\\/g, '/').replace(/\/+$/, '');
+        if (dir && normalized.indexOf(dir + '/') === 0) return roots[i];
+      }
+      return null;
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return '0 B';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
     // ------------------------------------------------------------------ panel
     function Panel(props) {
       const t = props.t;
@@ -610,6 +769,10 @@ window.__ModuleLoader__.load({
       const [usage, setUsage] = useState({});
       const [narrow, setNarrow] = useState(false);
       const [cardMax, setCardMax] = useState(0);
+      const [batch, setBatch] = useState(false);
+      const [picked, setPicked] = useState([]);
+      const [roots, setRoots] = useState(null);
+      const [deleteState, setDeleteState] = useState(null);
 
       const inputRef = useRef(null);
       const cardRef = useRef(null);
@@ -696,6 +859,132 @@ window.__ModuleLoader__.load({
         if (toastTimer.current) clearTimeout(toastTimer.current);
         toastTimer.current = setTimeout(function () { setToast(null); }, 2400);
       };
+
+      // Know which roots the host will delete inside, so rows can be enabled per row.
+      useEffect(function () {
+        let alive = true;
+        hostCall('/roots', {}).then(function (data) {
+          if (!alive) return;
+          setRoots(Array.isArray(data.roots) ? data.roots : []);
+        }).catch(function () {
+          if (alive) setRoots([]);
+        });
+        return function () { alive = false; };
+      }, []);
+
+      const rowDeletable = function (row) {
+        return ownerRoot(roots, row && row.path) !== null;
+      };
+
+      const toggleBatch = function () {
+        if (!batch && Array.isArray(roots) && roots.length === 0) {
+          flash(t('deleteUnavailable'), false);
+          return;
+        }
+        setBatch(!batch);
+        setPicked([]);
+        setExpanded('');
+      };
+
+      const togglePick = function (row) {
+        if (!rowDeletable(row)) {
+          flash(t('notDeletable'), false);
+          return;
+        }
+        setPicked(function (previous) {
+          if (previous.indexOf(row.name) >= 0) {
+            return previous.filter(function (name) { return name !== row.name; });
+          }
+          return previous.concat([row.name]);
+        });
+      };
+
+      const selectDeletableOnPage = function () {
+        const names = paged.filter(rowDeletable).map(function (row) { return row.name; });
+        setPicked(function (previous) {
+          const next = previous.slice();
+          for (let i = 0; i < names.length; i++) {
+            if (next.indexOf(names[i]) < 0) next.push(names[i]);
+          }
+          return next;
+        });
+      };
+
+      const openDelete = async function () {
+        if (picked.length === 0) {
+          flash(t('deleteNoSelection'), false);
+          return;
+        }
+        setDeleteState({ items: null, lock: null, text: '', busy: true, error: null, results: null });
+        const result = await hostCall('/preview', { names: picked });
+        if (result.ok === false) {
+          setDeleteState({
+            items: null, lock: null, text: '', busy: false, results: null,
+            error: result.reason === 'network' ? 'network' : result.reason
+          });
+          return;
+        }
+        setDeleteState({
+          items: result.items || [], lock: result.lock || null,
+          text: '', busy: false, error: null, results: null
+        });
+      };
+
+      const closeDelete = function () {
+        setDeleteState(null);
+      };
+
+      const runDelete = async function () {
+        const state = deleteState;
+        if (!state || !state.items || state.busy) return;
+        const allowed = state.items.filter(function (item) { return item.allowed; }).map(function (item) { return item.name; });
+        if (allowed.length === 0) return;
+        setDeleteState(Object.assign({}, state, { busy: true, error: null }));
+        const result = await hostCall('/delete', { names: allowed, confirm: 'DELETE' });
+        if (result.ok === false) {
+          setDeleteState(Object.assign({}, state, {
+            busy: false,
+            error: result.reason === 'network' ? 'network' : result.reason,
+            results: result.results || null
+          }));
+          return;
+        }
+
+        // Clean the local caches of the names that are really gone.
+        const removedNames = (result.results || [])
+          .filter(function (item) { return item.ok; })
+          .map(function (item) { return item.name; });
+        if (removedNames.length > 0) {
+          const nextCache = Object.assign({}, cache);
+          const nextUsage = Object.assign({}, usage);
+          for (let i = 0; i < removedNames.length; i++) {
+            delete nextCache[removedNames[i]];
+            delete nextUsage[removedNames[i]];
+          }
+          persistCache(nextCache);
+          persistUsage(nextUsage);
+          setSelected(function (current) { return removedNames.indexOf(current) >= 0 ? '' : current; });
+        }
+
+        const failed = (result.results || []).filter(function (item) { return !item.ok; }).length;
+        const lockCount = (result.lockRemoved || []).length;
+        let message = t('deletedOk', { n: removedNames.length });
+        if (lockCount > 0) message += t('deletedLockPart', { m: lockCount });
+        if (failed > 0) message += t('deletedFailPart', { k: failed });
+        flash(message, failed === 0);
+
+        setBatch(false);
+        setPicked([]);
+        setDeleteState(null);
+        setAttempt(attempt + 1);
+      };
+
+      const deleteWord = t('deleteTypeWord');
+      const deleteReady = !!deleteState
+        && !deleteState.busy
+        && !!deleteState.items
+        && deleteState.text.trim() === deleteWord
+        && deleteState.items.some(function (item) { return item.allowed; });
 
       const persistCache = function (next) {
         setCache(next);
@@ -945,6 +1234,22 @@ window.__ModuleLoader__.load({
             strokeWidth: 1.6, strokeLinecap: 'round'
           }, h('path', { d: 'M13 8a5 5 0 1 1-1.6-3.7' }), h('path', { d: 'M13 2.5V5h-2.5' })),
           t('refresh')
+        ),
+        h('button', {
+          type: 'button',
+          style: batch ? S.batchToggleOn : S.batchToggle,
+          title: t('batchTip'),
+          'aria-pressed': batch,
+          onClick: toggleBatch
+        },
+          h('svg', {
+            width: 12, height: 12, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor',
+            strokeWidth: 1.6, strokeLinecap: 'round'
+          },
+            h('path', { d: 'M3 4.5h10M6 4.5V3h4v1.5M4.5 4.5l.6 8.2h5.8l.6-8.2' }),
+            h('path', { d: 'M6.6 7v3.4M9.4 7v3.4' })
+          ),
+          batch ? t('exitBatch') : t('batch')
         )
       );
 
@@ -980,12 +1285,25 @@ window.__ModuleLoader__.load({
           const isSelected = row.name === selected;
           const isHover = row.name === hover;
           const isOpen = row.name === expanded;
+          const deletable = rowDeletable(row);
+          const isPicked = picked.indexOf(row.name) >= 0;
+          const checkbox = h('input', {
+            type: 'checkbox',
+            style: S.checkbox,
+            checked: isPicked,
+            disabled: !deletable,
+            title: deletable ? row.name : t('notDeletable'),
+            'aria-label': row.name,
+            onClick: function (event) { event.stopPropagation(); },
+            onChange: function () { togglePick(row); }
+          });
           const cells = [];
           cells.push(isSelected ? h('span', { key: 'a', style: S.accent }) : null);
 
           if (narrow) {
             cells.push(h('div', { key: 'n', style: { minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' } },
               h('div', { style: S.zhName },
+                batch ? checkbox : null,
                 row.zhName || row.name,
                 row.zhName ? null : h('span', { style: S.badge }, t('untranslated'))
               ),
@@ -994,7 +1312,7 @@ window.__ModuleLoader__.load({
             ));
           } else {
             cells.push(h('div', { key: 'n', style: S.nameCell },
-              h('button', {
+              batch ? checkbox : h('button', {
                 type: 'button', style: S.chevron, title: isOpen ? t('less') : t('more'),
                 'aria-expanded': isOpen, 'aria-label': isOpen ? t('less') : t('more'),
                 onClick: function (event) { event.stopPropagation(); setExpanded(isOpen ? '' : row.name); }
@@ -1013,38 +1331,51 @@ window.__ModuleLoader__.load({
             }, row.count ? t('usedN', { n: row.count }) : t('neverUsed')));
           }
 
-          const actions = (isHover || isSelected)
-            ? h('div', { key: 'x', style: S.actions },
-                h('button', {
-                  type: 'button', style: S.actBtn, title: '/' + row.name,
-                  onClick: function (event) { event.stopPropagation(); setSelected(row.name); doInsert(row); }
-                }, t('insert')),
-                h('button', {
-                  type: 'button', style: S.actIcon, title: t('edit'),
-                  onClick: function (event) {
-                    event.stopPropagation();
-                    setEditing({ name: row.name, zhName: row.zhName, zhDesc: row.zhDesc, manual: row.manual });
-                  }
-                }, '✎')
-              )
-            : h('span', { key: 't', style: S.tag(row.source === 'market') }, SOURCE_LABEL[row.source] || t('other'));
+          const actions = batch
+            ? h('span', {
+                key: 'x',
+                style: S.tag(row.source === 'market'),
+                title: deletable ? undefined : t('notDeletable')
+              }, SOURCE_LABEL[row.source] || t('other'))
+            : (isHover || isSelected)
+              ? h('div', { key: 'x', style: S.actions },
+                  h('button', {
+                    type: 'button', style: S.actBtn, title: '/' + row.name,
+                    onClick: function (event) { event.stopPropagation(); setSelected(row.name); doInsert(row); }
+                  }, t('insert')),
+                  h('button', {
+                    type: 'button', style: S.actIcon, title: t('edit'),
+                    onClick: function (event) {
+                      event.stopPropagation();
+                      setEditing({ name: row.name, zhName: row.zhName, zhDesc: row.zhDesc, manual: row.manual });
+                    }
+                  }, '✎')
+                )
+              : h('span', { key: 't', style: S.tag(row.source === 'market') }, SOURCE_LABEL[row.source] || t('other'));
 
-          if (narrow) cells.push(actions);
-          else cells.push(actions);
+          cells.push(actions);
 
           items.push(h('div', {
             key: row.name,
             role: 'option',
-            'aria-selected': isSelected,
-            style: S.row(isSelected, isHover, narrow),
+            'aria-selected': batch ? isPicked : isSelected,
+            style: S.row(batch ? isPicked : isSelected, isHover, narrow),
             onMouseEnter: function () { setHover(row.name); },
             onMouseLeave: function () { setHover(''); },
             onClick: function () {
+              if (batch) {
+                togglePick(row);
+                return;
+              }
               setSelected(row.name);
               if (inputRef.current) inputRef.current.focus();
             },
-            onDoubleClick: function () { setSelected(row.name); doInsert(row); },
-            title: row.description || row.name
+            onDoubleClick: function () {
+              if (batch) return;
+              setSelected(row.name);
+              doInsert(row);
+            },
+            title: batch && !deletable ? t('notDeletable') : (row.description || row.name)
           }, cells));
 
           if (isOpen) {
@@ -1090,7 +1421,31 @@ window.__ModuleLoader__.load({
         );
       }
 
-      const footer = h('div', { style: S.footer },
+      const footer = batch
+        ? h('div', { style: S.batchBar },
+            h('span', null, t('pickedN', { n: picked.length })),
+            h('span', null, '·'),
+            h('span', null, t('pickedDeletable', { m: picked.filter(function (name) {
+              const row = decorated.find(function (item) { return item.name === name; });
+              return !!row && rowDeletable(row);
+            }).length })),
+            h('button', {
+              type: 'button', style: S.linkBtn,
+              onClick: selectDeletableOnPage
+            }, t('selectPage')),
+            picked.length
+              ? h('button', { type: 'button', style: S.linkBtn, onClick: function () { setPicked([]); } }, t('clearPicked'))
+              : null,
+            h('div', { style: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' } },
+              h('button', {
+                type: 'button', style: S.batchToggleOn,
+                disabled: picked.length === 0,
+                onClick: openDelete
+              }, t('deleteSelected')),
+              h('button', { type: 'button', style: S.ghostBtn, onClick: toggleBatch }, t('exitBatch'))
+            )
+          )
+        : h('div', { style: S.footer },
         selectedRow
           ? h('span', null,
               t('selected', {
@@ -1176,6 +1531,88 @@ window.__ModuleLoader__.load({
         )
       ) : null;
 
+      const deleteAllowed = deleteState && deleteState.items
+        ? deleteState.items.filter(function (item) { return item.allowed; })
+        : [];
+      const deleteLocked = deleteAllowed.filter(function (item) { return item.lockRegistered; }).length;
+
+      const deleteModal = deleteState ? h('div', { style: S.scrim, onClick: function () { if (!deleteState.busy) closeDelete(); } },
+        h('div', { style: S.modal, onClick: function (event) { event.stopPropagation(); } },
+          h('div', { style: S.modalTitle }, t('deleteTitle', { n: deleteAllowed.length || picked.length })),
+          h('div', { style: S.modalBody }, t('deleteBody')),
+          deleteState.busy && !deleteState.items
+            ? h('div', { style: S.resultLine }, t('loading'))
+            : null,
+          deleteState.error
+            ? h('div', { style: S.warn },
+                deleteState.error === 'network'
+                  ? t('deleteUnavailable')
+                  : deleteState.error === 'lock-unreadable'
+                    ? t('reasonLockUnreadable')
+                    : t('deletePreviewFailed'))
+            : null,
+          deleteState.items && deleteState.items.length > 0
+            ? h('div', { style: S.modalList },
+                deleteState.items.map(function (item) {
+                  const failed = deleteState.results && deleteState.results.find(function (result) { return result.name === item.name; });
+                  const reason = failed && failed.ok === false
+                    ? (failed.reason === 'missing' ? t('reasonMissing')
+                      : failed.reason === 'symlink' ? t('reasonSymlink')
+                        : failed.reason === 'outside-root' ? t('reasonOutside')
+                          : String(failed.reason))
+                    : (!item.allowed
+                      ? (item.reason === 'missing' ? t('reasonMissing') : t('reasonManaged'))
+                      : null);
+                  return h('div', { key: item.name, style: S.modalItem },
+                    h('span', { style: S.modalItemName }, (item.allowed ? '' : '⛔ ') + item.name),
+                    item.allowed
+                      ? h('span', { style: S.modalItemPath }, item.dir)
+                      : null,
+                    h('span', null,
+                      item.allowed
+                        ? t('filesN', { n: item.files, size: formatBytes(item.bytes) }) + ' · '
+                          + (item.lockRegistered ? t('lockRegistered') : t('lockNotRegistered'))
+                        : reason),
+                    reason && item.allowed ? h('span', { style: { color: 'var(--dsw-alias-state-error-primary)' } }, reason) : null
+                  );
+                })
+              )
+            : null,
+          deleteState.items && deleteState.items.length > 0
+            ? h('div', { style: S.resultLine },
+                deleteLocked > 0 ? t('deleteLockNote', { n: deleteLocked }) : t('deleteNoLockNote', { n: deleteAllowed.length }))
+            : null,
+          deleteAllowed.length > 0
+            ? h('div', { style: S.field },
+                h('span', { style: S.fieldLabel }, t('deleteTypeHint', { word: deleteWord })),
+                h('input', {
+                  style: S.fieldInput,
+                  value: deleteState.text,
+                  autoFocus: true,
+                  disabled: deleteState.busy,
+                  placeholder: deleteWord,
+                  onChange: function (event) {
+                    setDeleteState(Object.assign({}, deleteState, { text: event.target.value }));
+                  }
+                })
+              )
+            : null,
+          h('div', { style: S.modalRow },
+            h('button', {
+              type: 'button', style: S.ghostBtn,
+              disabled: deleteState.busy,
+              onClick: closeDelete
+            }, t('deleteCancel')),
+            h('button', {
+              type: 'button',
+              style: deleteReady ? S.primary : Object.assign({}, S.primary, { opacity: 0.45, cursor: 'not-allowed' }),
+              disabled: !deleteReady,
+              onClick: runDelete
+            }, deleteState.busy ? t('deleting') : t('deleteGo'))
+          )
+        )
+      ) : null;
+
       return h('div', { ref: rootRef, style: S.root, tabIndex: -1, onKeyDown: onKeyDown },
         h('div', { style: S.head },
           h('div', { 'aria-hidden': true, style: S.avatar }, '技'),
@@ -1203,7 +1640,8 @@ window.__ModuleLoader__.load({
             )
           : null,
         editModal,
-        resetModal
+        resetModal,
+        deleteModal
       );
     }
 

@@ -74,6 +74,13 @@ for (const entry of pkg.files || []) {
 for (const required of ['README.md', 'LICENSE', 'CHANGELOG.md', 'icon.svg', 'cordis.patch.yml']) {
   if (!has(required)) fail(`repository: ${required} is missing`)
 }
+for (const hostFile of ['host/skills-core.js', 'scripts/test-host.mjs']) {
+  if (!has(hostFile)) fail(`repository: ${hostFile} is missing`)
+}
+if (has('host/skills-core.js') && !(pkg.files || []).includes('host')) {
+  fail('package.json: "host" must be listed in files')
+}
+
 
 // --------------------------------------------------------------- JS syntax
 for (const file of ['index.js', 'client.js']) {

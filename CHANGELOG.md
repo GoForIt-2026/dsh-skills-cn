@@ -4,6 +4,30 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-15
+
+### Added
+
+- **Batch deletion** behind an explicit selection mode: the toolbar's 批量删除 button turns rows into
+  checkboxes (no per-row delete button anywhere), and blocks insertion and editing while it is on.
+- Deletion is real: the skill directory and every file under it are removed from disk through a new
+  **host half** (`host/skills-core.js`), which the panel reaches over two loopback routes
+  (`POST /__dsh-skills-cn/preview`, `POST /__dsh-skills-cn/delete`) gated by an intent header,
+  a same-origin check and a literal confirmation token.
+- **`.skill-lock.json` stays in step**: registered names are pruned from `~/.agents/.skill-lock.json`
+  in the same request, atomically (temp file + rename), preserving `version`, `dismissed` and unknown
+  fields. Manually installed skills that were never registered leave the lock file byte-identical.
+- A confirmation dialog lists every target with its full path, file count, size and lock status, and
+  requires typing 删除 / DELETE before the confirm button enables.
+- `node --test` suite (`scripts/test-host.mjs`, 8 cases): pruning, untouched lock, invalid names,
+  symlinked skill directories, unreadable lock aborts, missing-directory cleanup, explicit
+  confirmation, missing lock.
+
+### Changed
+
+- `npm test` now runs the manifest validator plus the host unit tests.
+- `files` ships `host/`; the read-only badge became “只读浏览 · 删除需在批量模式二次确认”.
+
 ## [1.1.1] - 2026-11-15
 
 ### Changed

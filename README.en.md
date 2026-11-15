@@ -30,9 +30,31 @@ This plugin puts Chinese and English side by side: Chinese name on the left, the
 - **Instant search** across Chinese name, Chinese description, English id and the original English description.
 - **One-click insert**: double-click, `Enter`, or the row's **Insert** button appends `/skill-name ` to the composer; the caret stays at the end and **nothing is sent**. The same command is not written twice.
 - **Remembered view state**: group, sort and page survive a reload; the selected skill does not, so nothing is inserted by accident.
-- **Read-only**: no skill directory or `SKILL.md` is created, changed or removed; the English `name` is never rewritten.
+- **Read-only browsing**: normal mode creates, edits and deletes nothing.
+- **Batch deletion**: the toolbar's *Delete skills* button enters selection mode; tick rows, confirm with a typed word, and the skill directories are really removed — together with their `~/.agents/.skill-lock.json` registrations (see below).
 - **Offline**: Chinese text comes from the bundled dictionary plus your own edits — no network, no model call.
 - **Theme and locale aware**, with a stacked layout on narrow views.
+
+## Deleting skills (irreversible)
+
+![Delete confirmation](docs/screenshot-delete.png)
+
+There is **no per-row delete button**. Deletion only happens like this:
+
+1. Click **Delete skills** in the toolbar — rows turn into checkboxes, and double-click / `Enter` / *Insert* / edit are disabled for the duration.
+2. Tick the skills. Only skills inside a user-owned root can be ticked: `~/.agents/skills`, `~/.dsh/skills`, `~/.dsh/agent-skills`. Skills provided by npm, the DSH market or a preset are greyed out — deleting a `node_modules` folder by hand breaks the package, so the panel refuses.
+3. Click **Delete selected…**; the dialog lists every target with its Chinese name, English id, full path, file count/size and lock status.
+4. Type **DELETE** (删除 in Chinese) before the confirm button enables. There is no undo.
+
+What happens on confirm:
+
+- The skill directory and every file inside it is removed.
+- If the skill was registered in `~/.agents/.skill-lock.json`, that entry is removed **in the same request**, written atomically (temp file + rename) while keeping `version`, `dismissed` and unknown fields intact.
+- Skills that were never registered (hand-copied ones) leave the lock file **byte-identical**.
+- If the lock file cannot be parsed, the whole request aborts before anything is deleted — so you never end up with files gone and a stale registration.
+- Symlinked directories, names containing path separators, and already-missing directories are skipped per item with a reason.
+
+Deletion needs the plugin's **host half** (the browser cannot touch the filesystem). Without it the button reports “Deletion unavailable: needs the 1.2.0 host half — reinstall and restart DSH” and everything else keeps working.
 
 ## How it differs from similar plugins
 
@@ -119,11 +141,12 @@ Clearing them resets the plugin; no skill file is touched.
 
 The only DSH internal it depends on is **`skills/list`** — the same catalog the `/` slash menu uses — probed as `skills` → `sessionSkillCatalog` → `skillCatalog`. Insertion uses the composer's `inputActions`, degrading from `insertText` to `setDraft` to the clipboard. If any layer is unavailable the panel still mounts and shows a “catalog unavailable / retry” state instead of a blank slot.
 
-## Privacy and read-only guarantees
+## Privacy and boundaries
 
-- Reads the skill catalog DSH already loaded; it does not walk the disk or parse `SKILL.md`.
-- Uploads nothing and makes no network requests.
-- Writes no skill file, and stores no data of its own.
+- Browsing reads the skill catalog DSH already loaded; it does not walk the disk or parse `SKILL.md`.
+- Nothing is uploaded. Apart from the deletion request to a loopback route on this machine, no network request is made.
+- The only write is the **batch deletion you explicitly confirm** (directories + `.skill-lock.json`), gated by a same-origin check, an intent header and a typed confirmation word.
+- The plugin stores nothing on disk; three `localStorage` keys hold its own state.
 
 ## Reinstalling on a new machine
 

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Skill manager (Chinese)",
-    "description": "Adds a Skills view beside Chat, Trajectory, Workflow and Stats that lists every installed skill with a Chinese name and Chinese description next to its English id. Group by install source, sort by usage, name or source, page through 25 rows at a time, edit the Chinese text of any row, and expand a row for the English source and skill path. Picking one inserts its /skill-name command into the composer without sending it. Read-only and offline: no skill file is modified and no model quota is spent.",
+    "description": "Adds a Skills view beside Chat, Trajectory, Workflow and Stats that lists every installed skill with a Chinese name and Chinese description next to its English id. Group by install source, sort by usage, name or source, page through 25 rows at a time, edit the Chinese text of any row, and expand a row for the English source and skill path. Picking one inserts its /skill-name command into the composer without sending it. Browsing is read-only; an explicit batch mode can really delete skills that live in a user-owned root and prune their .skill-lock.json registrations (npm, market and preset skills are refused). Chinese text comes from a bundled dictionary: no network, no model quota.",
     "detail": "docs/DETAIL.md"
   }
 }
