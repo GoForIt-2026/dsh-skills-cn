@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Skill manager (Chinese)",
+    "description": "Adds a Skills view beside Chat, Trajectory, Workflow and Stats that lists every installed skill with a Chinese name and Chinese description next to its English id. Picking one inserts its /skill-name command into the composer without sending it. Read-only: no skill file is modified. Chinese text comes from a bundled dictionary, so it works offline and spends no model quota.",
+    "detail": "docs/DETAIL.md"
+  }
+}

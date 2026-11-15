@@ -1,0 +1,81 @@
+{
+  "name": "dsh-skills-cn",
+  "version": "1.0.0",
+  "description": "Browse every installed DSH skill with a Chinese name and Chinese description beside its English id, then insert its /skill-name command into the composer. Read-only, offline, no model quota.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "dsh",
+    "dsh-web",
+    "skills",
+    "skill-manager",
+    "skill-catalog",
+    "chinese",
+    "zh-cn",
+    "i18n",
+    "slash-command",
+    "composer",
+    "技能管理",
+    "技能浏览",
+    "中英对照"
+  ],
+  "license": "MIT",
+  "author": "YOUR_GITHUB",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YOUR_GITHUB/dsh-skills-cn.git"
+  },
+  "homepage": "https://github.com/YOUR_GITHUB/dsh-skills-cn#readme",
+  "bugs": {
+    "url": "https://github.com/YOUR_GITHUB/dsh-skills-cn/issues"
+  },
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.0-rc.1 <0.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node scripts/validate.mjs",
+    "validate": "node scripts/validate.mjs",
+    "pack:check": "npm pack --dry-run"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    },
+    "compatibility": {
+      "dshReleases": {
+        "0.2.2-rc.3": "compatible"
+      }
+    }
+  }
+}

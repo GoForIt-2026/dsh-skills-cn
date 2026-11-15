@@ -1,0 +1,13 @@
+node_modules/
+work/
+demo/
+tools/
+local/
+.pylibs/
+.tmp/
+.dl/
+*.tgz
+*.log
+*.pdf
+.DS_Store
+Thumbs.db
