@@ -922,14 +922,12 @@ window.__ModuleLoader__.load({
             onChange: function (event) { changeQuery(event.target.value); }
           })
         ),
-        narrow
-          ? h('select', {
-              style: S.select, value: group, 'aria-label': t('filterSource'),
-              onChange: function (event) { changeGroup(event.target.value); }
-            }, GROUPS.map(function (key) {
-              return h('option', { key: key, value: key }, groupLabel(key) + ' (' + (counts[key] || 0) + ')');
-            }))
-          : null,
+        h('select', {
+          style: S.select, value: group, 'aria-label': t('filterSource'),
+          onChange: function (event) { changeGroup(event.target.value); }
+        }, GROUPS.map(function (key) {
+          return h('option', { key: key, value: key }, groupLabel(key) + ' (' + (counts[key] || 0) + ')');
+        })),
         h('select', {
           style: S.select, value: sort, 'aria-label': t('sortLabel'),
           onChange: function (event) { changeSort(event.target.value); }
