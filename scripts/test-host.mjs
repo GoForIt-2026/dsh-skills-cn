@@ -356,22 +356,32 @@ test('rolls the files back into the trash when the lock write fails', async () =
   assert.equal(listed.count, 1)
   const entryId = listed.items[0].id
 
-  // A read-only lock makes both the atomic rename and the writeFile fallback fail.
-  await fs.chmod(lock, 0o444)
-  const restored = await restoreFromTrash([entryId], roots)
+  // Inject a failing lock write portably: point the root's lock into a directory
+  // that does not exist yet, so the temp write fails with ENOENT before anything is
+  // renamed. (A read-only lock file is not enough: on POSIX the atomic rename over
+  // a read-only file still succeeds, which is what the old version of this test
+  // assumed and why it only passed on Windows.)
+  const missingDir = path.join(home, 'lock-dir-missing')
+  const unwritable = [{ id: 'agents', dir: skills, lock: path.join(missingDir, '.skill-lock.json') }]
+  const restored = await restoreFromTrash([entryId], unwritable)
   assert.equal(restored.ok, true)
   assert.equal(restored.results[0].ok, false)
   assert.equal(restored.results[0].reason, 'lock-write-failed')
   await assert.rejects(fs.stat(path.join(skills, 'alpha')))
-  assert.equal((await listTrash(roots)).count, 1)
+  await assert.rejects(fs.stat(path.join(missingDir, '.skill-lock.json')))
+  assert.equal((await listTrash(roots)).count, 1, 'the entry stays so the user can retry')
+
+  // The original lock is untouched: the failed restore wrote nothing.
   const untouched = JSON.parse(await fs.readFile(lock, 'utf8'))
   assert.deepEqual(Object.keys(untouched.skills), [])
 
-  await fs.chmod(lock, 0o644)
-  const retry = await restoreFromTrash([entryId], roots)
+  // Make the path writable again and retry: the files come back with their record.
+  await fs.mkdir(missingDir, { recursive: true })
+  const retry = await restoreFromTrash([entryId], unwritable)
   assert.equal(retry.results[0].ok, true)
   assert.equal(retry.results[0].lockRestored, true)
-  const final = JSON.parse(await fs.readFile(lock, 'utf8'))
+  assert.ok(await fs.stat(path.join(skills, 'alpha', 'SKILL.md')))
+  const final = JSON.parse(await fs.readFile(path.join(missingDir, '.skill-lock.json'), 'utf8'))
   assert.deepEqual(Object.keys(final.skills), ['alpha'])
   assert.equal((await listTrash(roots)).count, 0)
 })
