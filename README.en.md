@@ -130,21 +130,23 @@ The plugin **scans no directory**: it calls the session's `skills/list` (the sam
 | DSH preset skill | 1 | inside the app bundle: `…/app.asar/dsh/node_modules/@deepseek-ai/dsh-agent-preset/skills/` |
 | Skills registered by bundled plugins (no file path) | 8 | office ×4, diagnose-windows-sandbox-acl, workflow-* ×3 |
 
+The four groups in the sidebar therefore read **34 user folders + 6 DSH bundled + 3 plugin provided + 0 other**.
+
 `~/.dsh/skills`, `~/.dsh/agent-skills`, `~/.claude/skills` and similar roots are empty here, so nothing comes from them.
 
 ### How the source tag is decided
 
-Only the `path` string from the catalog is inspected (case and separators normalised), in this order:
+The group comes from the `source` the Host skill registry reports, never from the path:
 
-| Order | Match | Tag | Group |
-|---|---|---|---|
-| 1 | `app.asar` or `/resources/app/` | preset | Other sources |
-| 2 | `node_modules` or `AppData\Roaming\npm` | npm | npm install |
-| 3 | `.agents/skills` | GitHub | GitHub (manual) |
-| 4 | `dsh-market` / `plugin-market` / `/market/` | market | DSH market |
-| 5 | anything else, or no `path` | other | Other sources |
+| `source` | Group | Typical origin |
+|---|---|---|
+| `user-agents` / `user-dsh` / any other `user-*` | User folders | skills you installed into `~/.agents/skills` or `~/.dsh/skills` yourself |
+| `bundled` | DSH bundled | skills shipped inside the app or a bundled plugin (`office` ×4, `diagnose-windows-sandbox-acl`, …) |
+| `custom` | DSH bundled | a directory DSH was configured with (`customSkillDirs`); on this machine it points at the preset folder inside the app bundle, which is `dsh-doc` |
+| `runtime` | Plugin provided | registered at runtime by an installed plugin (`workflow-*`, …) |
+| `project-dsh` / `project-agents` / anything else | Other | project-local skill folders and unrecognised entries (empty here) |
 
-The tag is display-only and **never grants deletion**: deletion requires the directory to sit inside `~/.agents/skills`, `~/.dsh/skills` or `~/.dsh/agent-skills`, and only when `path` exists.
+Only when the registry is unavailable does the panel fall back to the path heuristic (`.agents/skills` → user folders, `app.asar` → DSH bundled, `node_modules` → plugin provided). The tag is display-only and **never grants deletion**: deletion requires the directory to sit inside `~/.agents/skills`, `~/.dsh/skills` or `~/.dsh/agent-skills`, and only when the registry reports a path there.
 
 ## Where the Chinese comes from
 

@@ -138,6 +138,8 @@ dsh plugin --profile desktop add /path/to/dsh-skills-cn
 | DSH 预设技能 | 1 | 应用包内 `…/app.asar/dsh/node_modules/@deepseek-ai/dsh-agent-preset/skills/` |
 | 内置/插件提供的技能（无文件路径） | 8 | office ×4、diagnose-windows-sandbox-acl、workflow-* ×3，由各自的插件在运行时注册 |
 
+对应到左栏的四组是 **34 用户目录 + 6 DSH 内置 + 3 插件提供 + 0 其他**。
+
 `~/.dsh/skills`、`~/.dsh/agent-skills`、`~/.claude/skills` 等目录在本机都是空的，所以没有条目来自那里。
 
 ### 来源标签怎么判定
@@ -147,9 +149,10 @@ dsh plugin --profile desktop add /path/to/dsh-skills-cn
 | `source` | 分组 | 典型来源 |
 |---|---|---|
 | `user-agents` / `user-dsh` / 其它 `user-*` | 用户目录 | 你手动装进 `~/.agents/skills`、`~/.dsh/skills` 的技能 |
-| `bundled` | DSH 内置 | 应用包与内置插件自带的技能（`dsh-doc`、`office` 等） |
-| `runtime` / `custom` | 插件提供 | 已安装插件在运行时注册的技能（`workflow-*`、沙箱排障等） |
-| 其它 / 缺失 | 其他 | 未能归类的条目 |
+| `bundled` | DSH 内置 | 应用包与内置插件自带的技能（`office` ×4、`diagnose-windows-sandbox-acl` 等） |
+| `custom` | DSH 内置 | DSH 配置里登记的技能目录（`customSkillDirs`）；本机指向应用包内的预设目录，也就是 `dsh-doc` |
+| `runtime` | 插件提供 | 已安装插件在运行时注册的技能（`workflow-*` 等） |
+| `project-dsh` / `project-agents` / 其它 | 其他 | 项目内技能目录与未能归类的条目（本机为空） |
 
 行内「来源」标签和「提供方」列来自同一次注册表读取（`provider` 字段），只有拿不到注册表时才会退回按 `path` 的启发式判断（`.agents/skills` → 用户目录、`app.asar` → DSH 内置、`node_modules` → 插件提供）。这个标签只用于展示，**不参与删除许可**。
 

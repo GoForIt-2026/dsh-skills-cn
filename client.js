@@ -381,12 +381,16 @@ window.__ModuleLoader__.load({
 
     /**
      * Which fact-based group a skill belongs to.
-     * The Host registry reports `source` ('user-agents' / 'bundled' / 'runtime' /
-     * 'project-dsh' / ...); without it we fall back to the path heuristic.
+     * The Host registry reports `source` ('user-agents' / 'bundled' / 'custom' /
+     * 'runtime' / 'project-dsh' / ...); without it we fall back to the path
+     * heuristic.
      */
     function groupFor(source, path) {
-      if (source === 'bundled') return 'bundled';
-      if (source === 'runtime' || source === 'custom') return 'runtime';
+      // `custom` is a root DSH was configured with (`customSkillDirs`); on this
+      // machine that is the preset folder inside the app bundle (`dsh-doc`), so it
+      // is DSH content rather than something a plugin registered at runtime.
+      if (source === 'bundled' || source === 'custom') return 'bundled';
+      if (source === 'runtime') return 'runtime';
       if (source && source.indexOf('user-') === 0) return 'user';
       if (!source || source === 'unknown') {
         const legacy = sourceOf(path);

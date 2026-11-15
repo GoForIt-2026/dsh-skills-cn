@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4] - 2026-11-16
+
+### Changed
+
+- Skills reported with the `custom` source now group under **DSH 内置 / DSH bundled** instead of
+  插件提供 / Plugin provided. DSH reports `custom` for directories registered through `customSkillDirs`,
+  and on this machine that is the preset folder inside the app bundle (`dsh-doc`) — DSH content, not
+  something a plugin registered at runtime. The sidebar now reads
+  **34 用户目录 + 6 DSH 内置 + 3 插件提供 + 0 其他**.
+
+### Fixed
+
+- The English README still documented the 1.3.x path heuristic for source tags (preset / npm / GitHub /
+  market). Both READMEs now document the actual registry `source` rules and the current per-group counts.
+
 ## [1.4.3] - 2026-11-16
 
 ### Fixed
