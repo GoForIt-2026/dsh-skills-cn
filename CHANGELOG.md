@@ -4,6 +4,22 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-11-15
+
+### Fixed
+
+- The group counts did not add up: skills whose source matched nothing were dropped from every group
+  while still counted in “All skills”. A fifth group **其他来源 / Other sources** now holds both the
+  preset-bundled skills and the unrecognised ones, so the five counts always sum to the total.
+- Skills bundled inside the app (`…/app.asar/…`) were tagged **npm** because their path contains
+  `node_modules`; they are now tagged **预设 / preset** and grouped under 其他来源. Preset detection runs
+  before the npm rule.
+
+### Changed
+
+- The source rules are documented in both READMEs, with the real per-source breakdown of the 43 entries
+  on a typical machine (34 hand-installed + 1 preset + 8 bundled/plugin-provided).
+
 ## [1.3.0] - 2026-11-15
 
 ### Added

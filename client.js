@@ -13,7 +13,7 @@ window.__ModuleLoader__.load({
       usage: 'dsh-skills-cn/usage/v1',
       ui: 'dsh-skills-cn/ui/v1'
     };
-    const GROUPS = ['all', 'npm', 'github', 'market'];
+    const GROUPS = ['all', 'npm', 'github', 'market', 'other'];
     const SORTS = ['usage', 'name', 'source'];
 
     const zh = {
@@ -25,6 +25,7 @@ window.__ModuleLoader__.load({
       groupNpm: 'npm 安装',
       groupGithub: 'GitHub 手动安装',
       groupMarket: 'DSH 内部市场安装',
+      groupOther: '其他来源',
       sourceAll: '全部来源',
       filterSource: '按安装方式筛选',
       sortLabel: '排序',
@@ -147,6 +148,7 @@ window.__ModuleLoader__.load({
       groupNpm: 'npm install',
       groupGithub: 'GitHub (manual)',
       groupMarket: 'DSH market',
+      groupOther: 'Other sources',
       sourceAll: 'All sources',
       filterSource: 'Filter by source',
       sortLabel: 'Sort',
@@ -307,13 +309,15 @@ window.__ModuleLoader__.load({
       'workflow-run-state': ['工作流运行状态', '记录并恢复工作流实例的执行进度']
     };
 
-    const SOURCE_LABEL = { npm: 'npm', github: 'GitHub', market: '市场', other: '其他' };
-    const SOURCE_ORDER = { npm: 0, github: 1, market: 2, other: 3 };
+    const SOURCE_LABEL = { npm: 'npm', github: 'GitHub', market: '市场', preset: '预设', other: '其他' };
+    const SOURCE_ORDER = { npm: 0, github: 1, market: 2, preset: 3, other: 4 };
 
     // ---------------------------------------------------------------- helpers
     function sourceOf(path) {
       if (!path) return 'other';
       const p = String(path).toLowerCase().replace(/\\/g, '/');
+      // Skills bundled inside the app or a bundled package: read-only preset content.
+      if (p.indexOf('app.asar') >= 0 || p.indexOf('/resources/app/') >= 0) return 'preset';
       if (p.indexOf('node_modules') >= 0 || p.indexOf('appdata/roaming/npm') >= 0) return 'npm';
       if (p.indexOf('.agents/skills') >= 0) return 'github';
       if (p.indexOf('dsh-market') >= 0 || p.indexOf('plugin-market') >= 0 || p.indexOf('/market/') >= 0) return 'market';
@@ -1126,14 +1130,22 @@ window.__ModuleLoader__.load({
 
       const counts = useMemo(function () {
         const total = { all: decorated.length, npm: 0, github: 0, market: 0, other: 0 };
-        for (let i = 0; i < decorated.length; i++) total[decorated[i].source] += 1;
+        for (let i = 0; i < decorated.length; i++) {
+          const source = decorated[i].source;
+          if (source === 'preset' || source === 'other') total.other += 1;
+          else total[source] += 1;
+        }
         return total;
       }, [decorated]);
 
       const filtered = useMemo(function () {
         const q = query.trim().toLowerCase();
         return decorated.filter(function (row) {
-          if (group !== 'all' && row.source !== group) return false;
+          if (group === 'other') {
+            if (row.source !== 'other' && row.source !== 'preset') return false;
+          } else if (group !== 'all' && row.source !== group) {
+            return false;
+          }
           if (!q) return true;
           return (row.zhName && row.zhName.toLowerCase().indexOf(q) >= 0)
             || (row.zhDesc && row.zhDesc.toLowerCase().indexOf(q) >= 0)
@@ -1286,6 +1298,7 @@ window.__ModuleLoader__.load({
         if (key === 'npm') return t('groupNpm');
         if (key === 'github') return t('groupGithub');
         if (key === 'market') return t('groupMarket');
+        if (key === 'other') return t('groupOther');
         return t('groupAll');
       };
 

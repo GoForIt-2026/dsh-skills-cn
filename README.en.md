@@ -21,7 +21,7 @@ This plugin puts Chinese and English side by side: Chinese name on the left, the
 ## Features
 
 - **Bilingual rows**: Chinese name (bold), English `name` (monospace, grey), one-line Chinese description, usage count and source tag.
-- **Source groups**: a left column with All skills / npm install / GitHub (manual) / DSH market and their counts; a click filters the list. Skills whose source cannot be derived stay under All skills and are tagged *Other*.
+- **Source groups**: the left column lists All skills / npm install / GitHub (manual) / DSH market / Other sources with counts, and a click filters the list. The five counts add up to All skills.
 - **Three sort orders**: most used (default, ties by most recent), name A→Z, grouped by source.
 - **Paging**: 25 rows per page with numbered page buttons, total and page indicator; changing the search, group or sort returns to page 1 while the selection survives.
 - **Usage counters**: each successful insert records a count and a last-used time, shown per row and clearable from the footer behind a confirmation.
@@ -117,6 +117,32 @@ Open **Settings → Plugins** and make sure the “Skill manager (Chinese)” ro
 5. The composer now holds `/api-and-interface-design`; write your request after it and press Enter yourself.
 6. To edit the Chinese text, use ✎ on the row (or the button in the expanded area). Clear usage records from the footer.
 7. `Esc` clears the search; `▸` expands the English source and the skill path.
+
+## Where the skill entries come from
+
+The plugin **scans no directory**: it calls the session's `skills/list` (the same catalog the `/` menu uses) and receives `name` / `description` / `whenToUse` / `path` for each entry. On this machine the 43 entries come from:
+
+| Source | Count | Location on disk |
+|---|---|---|
+| Skills you installed from GitHub | 34 | `~/.agents/skills/<name>/SKILL.md` |
+| DSH preset skill | 1 | inside the app bundle: `…/app.asar/dsh/node_modules/@deepseek-ai/dsh-agent-preset/skills/` |
+| Skills registered by bundled plugins (no file path) | 8 | office ×4, diagnose-windows-sandbox-acl, workflow-* ×3 |
+
+`~/.dsh/skills`, `~/.dsh/agent-skills`, `~/.claude/skills` and similar roots are empty here, so nothing comes from them.
+
+### How the source tag is decided
+
+Only the `path` string from the catalog is inspected (case and separators normalised), in this order:
+
+| Order | Match | Tag | Group |
+|---|---|---|---|
+| 1 | `app.asar` or `/resources/app/` | preset | Other sources |
+| 2 | `node_modules` or `AppData\Roaming\npm` | npm | npm install |
+| 3 | `.agents/skills` | GitHub | GitHub (manual) |
+| 4 | `dsh-market` / `plugin-market` / `/market/` | market | DSH market |
+| 5 | anything else, or no `path` | other | Other sources |
+
+The tag is display-only and **never grants deletion**: deletion requires the directory to sit inside `~/.agents/skills`, `~/.dsh/skills` or `~/.dsh/agent-skills`, and only when `path` exists.
 
 ## Where the Chinese comes from
 
