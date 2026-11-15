@@ -1620,7 +1620,11 @@ window.__ModuleLoader__.load({
           cells.push(isSelected ? h('span', { key: 'a', style: S.accent }) : null);
 
           if (narrow) {
-            cells.push(h('div', { key: 'n', style: { minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' } },
+            cells.push(h('div', {
+              key: 'n',
+              title: (row.zhName ? row.zhName + ' · ' + row.name : row.name) + (row.zhDesc ? '\n' + row.zhDesc : ''),
+              style: { minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }
+            },
               h('div', { style: S.zhName },
                 batch ? checkbox : null,
                 row.zhName || row.name,
@@ -1630,7 +1634,11 @@ window.__ModuleLoader__.load({
               h('div', { style: S.desc }, row.zhDesc || row.description || t('noDesc'))
             ));
           } else {
-            cells.push(h('div', { key: 'n', style: S.nameCell },
+            cells.push(h('div', {
+              key: 'n',
+              style: S.nameCell,
+              title: row.zhName ? row.zhName + ' · ' + row.name : row.name
+            },
               batch ? checkbox : h('button', {
                 type: 'button', style: S.chevron, title: isOpen ? t('less') : t('more'),
                 'aria-expanded': isOpen, 'aria-label': isOpen ? t('less') : t('more'),
@@ -1642,8 +1650,16 @@ window.__ModuleLoader__.load({
               h('span', { style: S.zhName }, row.zhName || row.name),
               row.zhName ? null : h('span', { style: S.badge }, t('untranslated'))
             ));
-            cells.push(h('div', { key: 'e', style: S.enName }, row.name));
-            cells.push(h('div', { key: 'd', style: S.desc }, row.zhDesc || row.description || t('noDesc')));
+            cells.push(h('div', {
+              key: 'e',
+              style: S.enName,
+              title: (row.zhName ? row.zhName + ' · ' : '') + row.name
+            }, row.name));
+            cells.push(h('div', {
+              key: 'd',
+              style: S.desc,
+              title: row.zhDesc || row.description || t('noDesc')
+            }, row.zhDesc || row.description || t('noDesc')));
             cells.push(h('div', {
               key: 'dir',
               style: S.dirCell,
@@ -1718,7 +1734,7 @@ window.__ModuleLoader__.load({
               setSelected(row.name);
               doInsert(row);
             },
-            title: batch && !deletable ? t('notDeletable') : (row.description || row.name)
+            title: batch && !deletable ? t('notDeletable') : undefined
           }, cells));
 
           if (isOpen) {

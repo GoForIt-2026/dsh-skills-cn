@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-11-16
+
+### Changed
+
+- Row tooltips are now per column and Chinese first: 中文名称 shows `中文名 · 英文名`, 英文标识 shows
+  the same pair, 中文说明 shows the full Chinese description (falling back to the English one), and
+  目录 shows the **full absolute path** even though the cell itself is shortened to `~/…`. The row no
+  longer carries a single English `description` tooltip that overrode the column hints.
+
 ## [1.4.1] - 2026-11-16
 
 ### Fixed
