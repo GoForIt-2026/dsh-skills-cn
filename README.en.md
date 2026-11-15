@@ -35,7 +35,7 @@ This plugin puts Chinese and English side by side: Chinese name on the left, the
 - **Offline**: Chinese text comes from the bundled dictionary plus your own edits — no network, no model call.
 - **Theme and locale aware**, with a stacked layout on narrow views.
 
-## Deleting skills (irreversible)
+## Deleting skills (trash first)
 
 ![Delete confirmation](docs/screenshot-delete.png)
 
@@ -44,17 +44,27 @@ There is **no per-row delete button**. Deletion only happens like this:
 1. Click **Delete skills** in the toolbar — rows turn into checkboxes, and double-click / `Enter` / *Insert* / edit are disabled for the duration.
 2. Tick the skills. Only skills inside a user-owned root can be ticked: `~/.agents/skills`, `~/.dsh/skills`, `~/.dsh/agent-skills`. Skills provided by npm, the DSH market or a preset are greyed out — deleting a `node_modules` folder by hand breaks the package, so the panel refuses.
 3. Click **Delete selected…**; the dialog lists every target with its Chinese name, English id, full path, file count/size and lock status.
-4. Type **DELETE** (删除 in Chinese) before the confirm button enables. There is no undo.
+4. Type **DELETE** (删除 in Chinese) before the confirm button enables.
 
-What happens on confirm:
+### Trash (default, recoverable)
 
-- The skill directory and every file inside it is removed.
-- If the skill was registered in `~/.agents/.skill-lock.json`, that entry is removed **in the same request**, written atomically (temp file + rename) while keeping `version`, `dismissed` and unknown fields intact.
-- Skills that were never registered (hand-copied ones) leave the lock file **byte-identical**.
-- If the lock file cannot be parsed, the whole request aborts before anything is deleted — so you never end up with files gone and a stale registration.
+![Trash](docs/screenshot-trash.png)
+
+The dialog's **“先移到回收站（可恢复）” checkbox is checked by default**: the directory moves to `<skills root>/../.skill-trash/<id>/` and the pruned `.skill-lock.json` record travels with it in that entry's `meta.json`.
+
+The toolbar's **Trash (N)** entry opens the trash panel, where each item shows its name, original path, file count, size and removal time, with **Restore**, **Delete forever** and **Empty the trash** (behind a confirmation).
+
+Unchecking the box performs the permanent deletion described above, with a red warning.
+
+### How the lock file is handled
+
+- Both modes remove registered names from `~/.agents/.skill-lock.json`, written atomically while keeping `version`, `dismissed` and unknown fields.
+- Skills that were never registered leave the lock file **byte-identical**.
+- Restoring writes the record back when the skill is absent from the lock; an existing record is never duplicated.
+- If the lock cannot be parsed, the whole request aborts before any file is moved — so you never end up with files gone and a stale registration.
 - Symlinked directories, names containing path separators, and already-missing directories are skipped per item with a reason.
 
-Deletion needs the plugin's **host half** (the browser cannot touch the filesystem). Without it the button reports “Deletion unavailable: needs the 1.2.0 host half — reinstall and restart DSH” and everything else keeps working.
+Deletion needs the plugin's **host half** (the browser cannot touch the filesystem). Without it the button reports that deletion is unavailable and everything else keeps working.
 
 ## How it differs from similar plugins
 

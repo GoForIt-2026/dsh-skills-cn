@@ -96,6 +96,7 @@ window.__ModuleLoader__.load({
       notDeletable: '由 npm / 市场 / 预设提供，请用对应包管理器卸载',
       deleteTitle: '删除 {n} 个技能？',
       deleteBody: '以下目录与文件会被永久删除，无法撤销。',
+      deleteBodyTrash: '以下技能会先移入回收站，之后可以恢复或彻底删除。',
       deleteLockNote: '其中 {n} 个在 .skill-lock.json 里注册，删除时会同步移除这些记录。',
       deleteNoLockNote: '这 {n} 个都不在 .skill-lock.json 里注册，删除时不会改动锁文件。',
       deleteTypeHint: '输入「{word}」以启用确认按钮',
@@ -106,7 +107,7 @@ window.__ModuleLoader__.load({
       deletedOk: '已删除 {n} 个技能',
       deletedLockPart: '，skill-lock 移除 {m} 条',
       deletedFailPart: '，失败 {k} 个',
-      deleteUnavailable: '删除服务不可用：需要 1.2.0 的 Host 半边并重启 DSH',
+      deleteUnavailable: '删除服务不可用：需要插件的 Host 半边生效并重启 DSH',
       deleteNoSelection: '先勾选要删除的技能',
       deletePreviewFailed: '读取删除预览失败',
       reasonMissing: '目录已不存在（仅清理锁记录）',
@@ -118,7 +119,23 @@ window.__ModuleLoader__.load({
       lockRegistered: '已注册 skill-lock',
       lockNotRegistered: '未注册 skill-lock',
       filesN: '{n} 个文件 · {size}',
-      deleteHint: '删除入口只在批量模式里，行内没有删除按钮'
+      deleteHint: '删除入口只在批量模式里，行内没有删除按钮',
+      trash: '回收站',
+      trashTitle: '回收站（{n} 项）',
+      trashEmpty: '回收站是空的',
+      trashRestore: '恢复',
+      trashPurge: '彻底删除',
+      trashPurgeAll: '清空回收站',
+      trashPurgeAllConfirm: '彻底删除回收站里的 {n} 项？删除后无法恢复。',
+      trashRestored: '已恢复 {n} 个技能',
+      trashPurged: '已彻底删除 {n} 项',
+      trashFailed: '操作失败',
+      trashAt: '{time} 移除',
+      trashKeep: '先移到回收站（可恢复）',
+      trashHardWarn: '取消勾选将永久删除技能文件，无法恢复。',
+      trashedOk: '已移入回收站 {n} 个技能',
+      trashedLockPart: '，skill-lock 移除 {m} 条（恢复时会写回）',
+      trashLoadFailed: '读取回收站失败'
     };
 
     const en = {
@@ -201,6 +218,7 @@ window.__ModuleLoader__.load({
       notDeletable: 'Provided by npm / the market / a preset — uninstall it there',
       deleteTitle: 'Delete {n} skills?',
       deleteBody: 'These directories and files are removed permanently. This cannot be undone.',
+      deleteBodyTrash: 'These skills move to the trash first; you can restore or purge them afterwards.',
       deleteLockNote: '{n} of them are registered in .skill-lock.json; those entries are removed too.',
       deleteNoLockNote: 'None of them are registered in .skill-lock.json, so the lock file is left untouched.',
       deleteTypeHint: 'Type “{word}” to enable the confirm button',
@@ -211,7 +229,7 @@ window.__ModuleLoader__.load({
       deletedOk: '{n} skills deleted',
       deletedLockPart: ', {m} lock entries removed',
       deletedFailPart: ', {k} failed',
-      deleteUnavailable: 'Deletion unavailable: needs the 1.2.0 host half — reinstall and restart DSH',
+      deleteUnavailable: 'Deletion unavailable: the plugin host half must be active — reinstall and restart DSH',
       deleteNoSelection: 'Tick the skills to delete first',
       deletePreviewFailed: 'Could not read the deletion preview',
       reasonMissing: 'Directory is already gone (lock cleaned only)',
@@ -223,7 +241,23 @@ window.__ModuleLoader__.load({
       lockRegistered: 'registered in skill-lock',
       lockNotRegistered: 'not registered',
       filesN: '{n} files · {size}',
-      deleteHint: 'Deletion only exists in selection mode; there is no per-row delete button'
+      deleteHint: 'Deletion only exists in selection mode; there is no per-row delete button',
+      trash: 'Trash',
+      trashTitle: 'Trash ({n} items)',
+      trashEmpty: 'The trash is empty',
+      trashRestore: 'Restore',
+      trashPurge: 'Delete forever',
+      trashPurgeAll: 'Empty the trash',
+      trashPurgeAllConfirm: 'Permanently delete all {n} items in the trash? This cannot be undone.',
+      trashRestored: 'Restored {n} skills',
+      trashPurged: 'Permanently deleted {n} items',
+      trashFailed: 'The action failed',
+      trashAt: 'removed {time}',
+      trashKeep: 'Move to the trash first (recoverable)',
+      trashHardWarn: 'Unchecking deletes the skill files permanently.',
+      trashedOk: 'Moved {n} skills to the trash',
+      trashedLockPart: ', {m} lock entries removed (restored with the skill)',
+      trashLoadFailed: 'Could not read the trash'
     };
 
     // Bundled Chinese index for common skill packs: SKILL.md `name` -> [中文名, 中文说明].
@@ -587,7 +621,8 @@ window.__ModuleLoader__.load({
       },
       dangerLink: {
         padding: 0, border: 0, background: 'transparent', cursor: 'pointer',
-        color: 'var(--dsw-alias-state-error-primary)', fontFamily: 'inherit', fontSize: 'inherit'
+        color: 'var(--dsw-alias-state-error-primary)', fontFamily: 'inherit', fontSize: '12px',
+        whiteSpace: 'nowrap'
       },
       batchToggle: {
         flex: '0 0 auto', height: '32px', padding: '0 10px', borderRadius: '9px',
@@ -671,7 +706,8 @@ window.__ModuleLoader__.load({
       ghostBtn: {
         padding: '5px 10px', borderRadius: '8px', fontSize: '12.5px', cursor: 'pointer',
         fontFamily: 'inherit', color: 'var(--dsw-alias-label-secondary)',
-        background: 'transparent', border: '1px solid var(--dsw-alias-border-l1)'
+        background: 'transparent', border: '1px solid var(--dsw-alias-border-l1)',
+        whiteSpace: 'nowrap'
       },
       toast: function (ok) {
         return {
@@ -773,6 +809,10 @@ window.__ModuleLoader__.load({
       const [picked, setPicked] = useState([]);
       const [roots, setRoots] = useState(null);
       const [deleteState, setDeleteState] = useState(null);
+      const [trash, setTrash] = useState([]);
+      const [trashOpen, setTrashOpen] = useState(false);
+      const [trashBusy, setTrashBusy] = useState(false);
+      const [trashConfirmAll, setTrashConfirmAll] = useState(false);
 
       const inputRef = useRef(null);
       const cardRef = useRef(null);
@@ -876,6 +916,63 @@ window.__ModuleLoader__.load({
         return ownerRoot(roots, row && row.path) !== null;
       };
 
+      const refreshTrash = function () {
+        hostCall('/trash-list', {}).then(function (data) {
+          setTrash(Array.isArray(data.items) ? data.items : []);
+        }).catch(function () {
+          setTrash([]);
+        });
+      };
+
+      useEffect(function () {
+        refreshTrash();
+      }, []);
+
+      const restoreTrash = async function (id) {
+        if (trashBusy) return;
+        setTrashBusy(true);
+        const result = await hostCall('/trash-restore', { ids: [id] });
+        setTrashBusy(false);
+        if (result.ok === false) {
+          flash(t('trashFailed'), false);
+          return;
+        }
+        const done = (result.results || []).filter(function (item) { return item.ok; }).length;
+        const failed = (result.results || []).filter(function (item) { return !item.ok; }).length;
+        flash(failed ? t('trashFailed') : t('trashRestored', { n: done }), failed === 0);
+        refreshTrash();
+        setAttempt(attempt + 1);
+      };
+
+      const purgeTrashEntry = async function (id) {
+        if (trashBusy) return;
+        setTrashBusy(true);
+        const result = await hostCall('/trash-purge', { ids: [id] });
+        setTrashBusy(false);
+        if (result.ok === false) {
+          flash(t('trashFailed'), false);
+          return;
+        }
+        flash(t('trashPurged', { n: 1 }), true);
+        refreshTrash();
+      };
+
+      const purgeAllTrash = async function () {
+        if (trashBusy || trash.length === 0) return;
+        setTrashBusy(true);
+        const result = await hostCall('/trash-purge', {
+          ids: trash.map(function (item) { return item.id; })
+        });
+        setTrashBusy(false);
+        setTrashConfirmAll(false);
+        if (result.ok === false) {
+          flash(t('trashFailed'), false);
+          return;
+        }
+        flash(t('trashPurged', { n: trash.length }), true);
+        refreshTrash();
+      };
+
       const toggleBatch = function () {
         if (!batch && Array.isArray(roots) && roots.length === 0) {
           flash(t('deleteUnavailable'), false);
@@ -915,18 +1012,18 @@ window.__ModuleLoader__.load({
           flash(t('deleteNoSelection'), false);
           return;
         }
-        setDeleteState({ items: null, lock: null, text: '', busy: true, error: null, results: null });
+        setDeleteState({ items: null, lock: null, text: '', busy: true, error: null, results: null, mode: 'trash' });
         const result = await hostCall('/preview', { names: picked });
         if (result.ok === false) {
           setDeleteState({
-            items: null, lock: null, text: '', busy: false, results: null,
+            items: null, lock: null, text: '', busy: false, results: null, mode: 'trash',
             error: result.reason === 'network' ? 'network' : result.reason
           });
           return;
         }
         setDeleteState({
           items: result.items || [], lock: result.lock || null,
-          text: '', busy: false, error: null, results: null
+          text: '', busy: false, error: null, results: null, mode: 'trash'
         });
       };
 
@@ -940,7 +1037,8 @@ window.__ModuleLoader__.load({
         const allowed = state.items.filter(function (item) { return item.allowed; }).map(function (item) { return item.name; });
         if (allowed.length === 0) return;
         setDeleteState(Object.assign({}, state, { busy: true, error: null }));
-        const result = await hostCall('/delete', { names: allowed, confirm: 'DELETE' });
+        const mode = state.mode === 'purge' ? 'purge' : 'trash';
+        const result = await hostCall('/delete', { names: allowed, confirm: 'DELETE', mode: mode });
         if (result.ok === false) {
           setDeleteState(Object.assign({}, state, {
             busy: false,
@@ -968,14 +1066,22 @@ window.__ModuleLoader__.load({
 
         const failed = (result.results || []).filter(function (item) { return !item.ok; }).length;
         const lockCount = (result.lockRemoved || []).length;
-        let message = t('deletedOk', { n: removedNames.length });
-        if (lockCount > 0) message += t('deletedLockPart', { m: lockCount });
+        const trashedCount = (result.trashed || []).length;
+        let message = mode === 'trash'
+          ? t('trashedOk', { n: trashedCount })
+          : t('deletedOk', { n: removedNames.length });
+        if (lockCount > 0) {
+          message += mode === 'trash'
+            ? t('trashedLockPart', { m: lockCount })
+            : t('deletedLockPart', { m: lockCount });
+        }
         if (failed > 0) message += t('deletedFailPart', { k: failed });
         flash(message, failed === 0);
 
         setBatch(false);
         setPicked([]);
         setDeleteState(null);
+        refreshTrash();
         setAttempt(attempt + 1);
       };
 
@@ -1250,6 +1356,19 @@ window.__ModuleLoader__.load({
             h('path', { d: 'M6.6 7v3.4M9.4 7v3.4' })
           ),
           batch ? t('exitBatch') : t('batch')
+        ),
+        h('button', {
+          type: 'button', style: S.iconBtn, title: t('trash'),
+          onClick: function () { setTrashOpen(true); refreshTrash(); }
+        },
+          h('svg', {
+            width: 12, height: 12, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor',
+            strokeWidth: 1.6, strokeLinecap: 'round'
+          },
+            h('path', { d: 'M2.5 4.5h11l-.9 8.2a1 1 0 0 1-1 .8H4.4a1 1 0 0 1-1-.8z' }),
+            h('path', { d: 'M6.2 2.6h3.6M6.6 7v4M9.4 7v4' })
+          ),
+          t('trash') + (trash.length ? ' (' + trash.length + ')' : '')
         )
       );
 
@@ -1539,7 +1658,8 @@ window.__ModuleLoader__.load({
       const deleteModal = deleteState ? h('div', { style: S.scrim, onClick: function () { if (!deleteState.busy) closeDelete(); } },
         h('div', { style: S.modal, onClick: function (event) { event.stopPropagation(); } },
           h('div', { style: S.modalTitle }, t('deleteTitle', { n: deleteAllowed.length || picked.length })),
-          h('div', { style: S.modalBody }, t('deleteBody')),
+          h('div', { style: S.modalBody },
+            deleteState.mode === 'purge' ? t('deleteBody') : t('deleteBodyTrash')),
           deleteState.busy && !deleteState.items
             ? h('div', { style: S.resultLine }, t('loading'))
             : null,
@@ -1582,6 +1702,28 @@ window.__ModuleLoader__.load({
             ? h('div', { style: S.resultLine },
                 deleteLocked > 0 ? t('deleteLockNote', { n: deleteLocked }) : t('deleteNoLockNote', { n: deleteAllowed.length }))
             : null,
+          deleteState.items && deleteState.items.length > 0
+            ? h('label', {
+                style: {
+                  display: 'flex', alignItems: 'center', gap: '7px', cursor: 'pointer',
+                  fontSize: '12px', color: 'var(--dsw-alias-label-primary)'
+                }
+              },
+                h('input', {
+                  type: 'checkbox',
+                  style: S.checkbox,
+                  checked: deleteState.mode !== 'purge',
+                  disabled: deleteState.busy,
+                  onChange: function (event) {
+                    setDeleteState(Object.assign({}, deleteState, { mode: event.target.checked ? 'trash' : 'purge' }));
+                  }
+                }),
+                h('span', null, t('trashKeep'))
+              )
+            : null,
+          deleteState.mode === 'purge'
+            ? h('div', { style: S.warn }, t('trashHardWarn'))
+            : null,
           deleteAllowed.length > 0
             ? h('div', { style: S.field },
                 h('span', { style: S.fieldLabel }, t('deleteTypeHint', { word: deleteWord })),
@@ -1609,6 +1751,73 @@ window.__ModuleLoader__.load({
               disabled: !deleteReady,
               onClick: runDelete
             }, deleteState.busy ? t('deleting') : t('deleteGo'))
+          )
+        )
+      ) : null;
+
+      const trashModal = trashOpen ? h('div', {
+        style: S.scrim,
+        onClick: function () { setTrashOpen(false); setTrashConfirmAll(false); }
+      },
+        h('div', {
+          style: Object.assign({}, S.modal, { width: '580px' }),
+          onClick: function (event) { event.stopPropagation(); }
+        },
+          h('div', { style: S.modalTitle }, t('trashTitle', { n: trash.length })),
+          trash.length === 0
+            ? h('div', { style: S.stateBody }, t('trashEmpty'))
+            : h('div', { style: S.modalList },
+                trash.map(function (item) {
+                  return h('div', {
+                    key: item.id,
+                    style: { display: 'flex', alignItems: 'center', gap: '8px' }
+                  },
+                    h('div', { style: { flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' } },
+                      h('span', { style: S.modalItemName }, item.name),
+                      h('span', { style: S.modalItemPath }, item.originalDir),
+                      h('span', { style: S.resultLine },
+                        t('filesN', { n: item.files, size: formatBytes(item.bytes) }) + ' · '
+                          + t('trashAt', { time: relTime(item.trashedAt) }))
+                    ),
+                    h('button', {
+                      type: 'button', style: S.ghostBtn,
+                      disabled: trashBusy,
+                      onClick: function () { restoreTrash(item.id); }
+                    }, t('trashRestore')),
+                    h('button', {
+                      type: 'button', style: S.dangerLink,
+                      disabled: trashBusy,
+                      onClick: function () { purgeTrashEntry(item.id); }
+                    }, t('trashPurge'))
+                  );
+                })
+              ),
+          trashConfirmAll ? h('div', { style: S.warn }, t('trashPurgeAllConfirm', { n: trash.length })) : null,
+          h('div', { style: S.modalRow },
+            trash.length > 0 && !trashConfirmAll
+              ? h('button', {
+                  type: 'button', style: S.ghostBtn,
+                  onClick: function () { setTrashConfirmAll(true); }
+                }, t('trashPurgeAll'))
+              : null,
+            trashConfirmAll
+              ? h('button', {
+                  type: 'button', style: S.ghostBtn,
+                  onClick: function () { setTrashConfirmAll(false); }
+                }, t('deleteCancel'))
+              : null,
+            trashConfirmAll
+              ? h('button', {
+                  type: 'button',
+                  style: Object.assign({}, S.primary, { background: 'var(--dsw-alias-state-error-primary)', borderColor: 'var(--dsw-alias-state-error-primary)' }),
+                  disabled: trashBusy,
+                  onClick: purgeAllTrash
+                }, t('trashPurgeAll'))
+              : null,
+            h('button', {
+              type: 'button', style: S.ghostBtn,
+              onClick: function () { setTrashOpen(false); setTrashConfirmAll(false); }
+            }, t('deleteCancel'))
           )
         )
       ) : null;
@@ -1641,7 +1850,8 @@ window.__ModuleLoader__.load({
           : null,
         editModal,
         resetModal,
-        deleteModal
+        deleteModal,
+        trashModal
       );
     }
 

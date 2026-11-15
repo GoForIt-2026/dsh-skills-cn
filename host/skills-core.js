@@ -207,6 +207,188 @@ export async function preview(names, roots = skillRoots()) {
   }
 }
 
+function lockEntryOf(lockData, name) {
+  if (!lockData || !lockData.skills || typeof lockData.skills !== 'object') return null
+  return Object.hasOwn(lockData.skills, name) ? lockData.skills[name] : null
+}
+
+/** `<root>/../.skill-trash` — beside the skills directory, never inside it. */
+export function trashRootOf(root) {
+  return path.join(path.dirname(root.dir), '.skill-trash')
+}
+
+function newTrashId() {
+  return Date.now().toString(36) + '-' + randomBytes(3).toString('hex')
+}
+
+/** Move one skill directory into the root's trash with a restore manifest. */
+export async function moveToTrash(name, found, lockEntry) {
+  const root = found.root
+  const trashRoot = trashRootOf(root)
+  const id = newTrashId()
+  const entryDir = path.join(trashRoot, id)
+  await fs.mkdir(entryDir, { recursive: true })
+  const meta = {
+    version: 1,
+    id,
+    name,
+    rootId: root.id,
+    rootDir: root.dir,
+    originalDir: found.dir,
+    trashedAt: Date.now(),
+    lockEntry: lockEntry || null
+  }
+  await fs.writeFile(path.join(entryDir, 'meta.json'), JSON.stringify(meta, null, 2) + '\n', 'utf8')
+  try {
+    await fs.rename(found.dir, path.join(entryDir, name))
+  } catch (error) {
+    if (error && error.code === 'EXDEV') {
+      // Different volume: copy then remove.
+      await fs.cp(found.dir, path.join(entryDir, name), { recursive: true, force: true })
+      await fs.rm(found.dir, { recursive: true, force: true, maxRetries: 3 })
+    } else {
+      await fs.rm(entryDir, { recursive: true, force: true }).catch(() => {})
+      throw error
+    }
+  }
+  return meta
+}
+
+/** Read every trash entry across the allowed roots. */
+export async function listTrash(roots = skillRoots()) {
+  const items = []
+  const seen = new Set()
+  for (const root of roots) {
+    const trashRoot = trashRootOf(root)
+    if (seen.has(trashRoot)) continue
+    seen.add(trashRoot)
+    let ids
+    try {
+      ids = await fs.readdir(trashRoot, { withFileTypes: true })
+    } catch (error) {
+      continue
+    }
+    for (const entry of ids) {
+      if (!entry.isDirectory()) continue
+      const entryDir = path.join(trashRoot, entry.name)
+      let meta
+      try {
+        meta = JSON.parse(await fs.readFile(path.join(entryDir, 'meta.json'), 'utf8'))
+      } catch (error) {
+        continue
+      }
+      const payloadDir = path.join(entryDir, meta.name || '')
+      const stats = await measure(payloadDir)
+      items.push({
+        id: meta.id || entry.name,
+        name: meta.name,
+        rootId: meta.rootId,
+        rootDir: meta.rootDir,
+        originalDir: meta.originalDir,
+        trashedAt: meta.trashedAt || 0,
+        lockEntry: meta.lockEntry || null,
+        bytes: stats.bytes,
+        files: stats.files,
+        entryDir
+      })
+    }
+  }
+  items.sort(function (a, b) { return b.trashedAt - a.trashedAt })
+  return { ok: true, items, count: items.length }
+}
+
+function findRootForMeta(meta, roots) {
+  const byId = roots.find(function (root) { return root.id === meta.rootId })
+  if (byId) return byId
+  return roots.find(function (root) { return samePath(root.dir, meta.rootDir) }) || null
+}
+
+/** Move one trash entry back to its original root and restore its lock record. */
+export async function restoreFromTrash(ids, roots = skillRoots()) {
+  if (!Array.isArray(ids) || ids.length === 0) return { ok: false, reason: 'empty' }
+  const listed = await listTrash(roots)
+  const results = []
+  const lockRoot = roots.find(function (root) { return root.lock })
+  let lock = lockRoot ? await readLock(lockRoot.lock) : { ok: true, data: null }
+  if (lockRoot && lock.ok === false) {
+    return { ok: false, aborted: 'lock-unreadable', results: [] }
+  }
+
+  for (const id of ids) {
+    const entry = listed.items.find(function (item) { return item.id === id })
+    if (!entry) {
+      results.push({ id, ok: false, reason: 'not-found' })
+      continue
+    }
+    if (!isValidName(entry.name)) {
+      results.push({ id, ok: false, reason: 'invalid-name' })
+      continue
+    }
+    const root = findRootForMeta(entry, roots)
+    if (!root) {
+      results.push({ id, ok: false, reason: 'outside-root' })
+      continue
+    }
+    const target = path.join(root.dir, entry.name)
+    const existing = await statOrNull(target)
+    if (existing !== null) {
+      results.push({ id, ok: false, reason: 'target-exists' })
+      continue
+    }
+    try {
+      await fs.mkdir(root.dir, { recursive: true })
+      await fs.rename(path.join(entry.entryDir, entry.name), target)
+    } catch (error) {
+      try {
+        await fs.cp(path.join(entry.entryDir, entry.name), target, { recursive: true, force: false, errorOnExist: true })
+        await fs.rm(path.join(entry.entryDir, entry.name), { recursive: true, force: true })
+      } catch (fallbackError) {
+        results.push({ id, ok: false, reason: (fallbackError && fallbackError.code) || 'restore-failed' })
+        continue
+      }
+    }
+
+    let lockRestored = false
+    if (lockRoot && entry.lockEntry && lock.ok) {
+      const data = lock.data || { version: 3, skills: {} }
+      const skills = Object.assign({}, data.skills || {})
+      if (!Object.hasOwn(skills, entry.name)) {
+        skills[entry.name] = entry.lockEntry
+        lock.data = Object.assign({}, data, { skills })
+        try {
+          await writeLockAtomic(lockRoot.lock, lock.data)
+          lockRestored = true
+        } catch (error) { /* the files are back; report the lock separately */ }
+      }
+    }
+    await fs.rm(entry.entryDir, { recursive: true, force: true }).catch(() => {})
+    results.push({ id, ok: true, name: entry.name, dir: target, lockRestored })
+  }
+
+  return { ok: true, results }
+}
+
+/** Permanently remove trash entries. */
+export async function purgeTrash(ids, roots = skillRoots()) {
+  if (!Array.isArray(ids) || ids.length === 0) return { ok: false, reason: 'empty' }
+  const listed = await listTrash(roots)
+  const results = []
+  for (const id of ids) {
+    const entry = listed.items.find(function (item) { return item.id === id })
+    if (!entry) {
+      results.push({ id, ok: false, reason: 'not-found' })
+      continue
+    }
+    try {
+      await fs.rm(entry.entryDir, { recursive: true, force: true, maxRetries: 3 })
+      results.push({ id, ok: true })
+    } catch (error) {
+      results.push({ id, ok: false, reason: (error && error.code) || 'purge-failed' })
+    }
+  }
+  return { ok: true, results }
+}
+
 /**
  * Delete the requested skill directories and prune their lock registrations.
  * The lock is parsed first: an unreadable lock aborts before any file is touched.
@@ -215,6 +397,7 @@ export async function removeSkills(names, roots = skillRoots(), options = {}) {
   const list = normalizeNames(names)
   if (list.ok === false) return { ok: false, reason: list.reason }
   if (options.confirm !== CONFIRM_TOKEN) return { ok: false, reason: 'confirmation-required' }
+  const mode = options.mode === 'purge' ? 'purge' : 'trash'
 
   const results = []
   const located = []
@@ -249,10 +432,16 @@ export async function removeSkills(names, roots = skillRoots(), options = {}) {
 
   for (const entry of located) {
     try {
-      await fs.rm(entry.found.dir, { recursive: true, force: true, maxRetries: 3 })
+      if (mode === 'trash') {
+        const original = lockEntryOf(lock.data, entry.name)
+        await moveToTrash(entry.name, entry.found, original)
+        results.push({ name: entry.name, ok: true, dir: entry.found.dir, trashed: true })
+      } else {
+        await fs.rm(entry.found.dir, { recursive: true, force: true, maxRetries: 3 })
+        results.push({ name: entry.name, ok: true, dir: entry.found.dir })
+      }
       deleted.push(entry.name)
       prunable.push(entry.name)
-      results.push({ name: entry.name, ok: true, dir: entry.found.dir })
     } catch (error) {
       results.push({ name: entry.name, ok: false, reason: (error && error.code) || 'delete-failed' })
     }
@@ -283,5 +472,14 @@ export async function removeSkills(names, roots = skillRoots(), options = {}) {
     if (result.ok && lockRemoved.includes(result.name)) result.lockRemoved = true
   }
 
-  return { ok: true, results, deleted, lockChanged, lockRemoved, lockPath }
+  return {
+    ok: true,
+    results,
+    mode,
+    deleted,
+    trashed: results.filter(function (item) { return item.trashed === true; }).map(function (item) { return item.name; }),
+    lockChanged,
+    lockRemoved,
+    lockPath
+  }
 }

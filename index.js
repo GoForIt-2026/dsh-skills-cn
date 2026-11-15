@@ -15,7 +15,16 @@
  * cannot be registered (no webServer) leaves the panel fully functional minus
  * deletion, which reports itself instead of failing silently.
  */
-import { preview, removeSkills, skillRoots, CONFIRM_TOKEN, MAX_NAMES } from './host/skills-core.js'
+import {
+  preview,
+  removeSkills,
+  listTrash,
+  restoreFromTrash,
+  purgeTrash,
+  skillRoots,
+  CONFIRM_TOKEN,
+  MAX_NAMES
+} from './host/skills-core.js'
 
 const PREFIX = '/__dsh-skills-cn'
 const INTENT_HEADER = 'x-dsh-skills-cn'
@@ -134,6 +143,12 @@ export function apply(ctx) {
     }))
 
     mount('/preview', async (body) => preview(body.names, skillRoots()))
-    mount('/delete', async (body) => removeSkills(body.names, skillRoots(), { confirm: body.confirm }))
+    mount('/delete', async (body) => removeSkills(body.names, skillRoots(), {
+      confirm: body.confirm,
+      mode: body.mode
+    }))
+    mount('/trash-list', async () => listTrash(skillRoots()))
+    mount('/trash-restore', async (body) => restoreFromTrash(body.ids, skillRoots()))
+    mount('/trash-purge', async (body) => purgeTrash(body.ids, skillRoots()))
   })
 }

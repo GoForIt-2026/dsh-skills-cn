@@ -15,7 +15,11 @@ import {
   locate,
   preview,
   removeSkills,
+  listTrash,
+  restoreFromTrash,
+  purgeTrash,
   skillRoots,
+  trashRootOf,
   CONFIRM_TOKEN
 } from '../host/skills-core.js'
 
@@ -176,4 +180,72 @@ test('treats a missing lock file as an empty registry', async () => {
   assert.equal(result.ok, true)
   assert.equal(result.lockChanged, false)
   await assert.rejects(fs.stat(path.join(skills, 'beta')))
+})
+
+test('moves skills into the trash by default and keeps their lock record for restore', async () => {
+  const { home, skills, roots } = await makeHome()
+  const lock = await writeLock(home, { alpha: ENTRY() })
+
+  const result = await removeSkills(['alpha', 'beta'], roots, { confirm: CONFIRM_TOKEN })
+  assert.equal(result.ok, true)
+  assert.equal(result.mode, 'trash')
+  assert.deepEqual(result.trashed.sort(), ['alpha', 'beta'])
+  assert.deepEqual(result.lockRemoved, ['alpha'])
+  await assert.rejects(fs.stat(path.join(skills, 'alpha')))
+  await assert.rejects(fs.stat(path.join(skills, 'beta')))
+
+  const trashRoot = trashRootOf(roots[0])
+  const listed = await listTrash(roots)
+  assert.equal(listed.ok, true)
+  assert.equal(listed.count, 2)
+  const alpha = listed.items.find((item) => item.name === 'alpha')
+  assert.ok(alpha, 'alpha should be in the trash')
+  assert.ok(alpha.lockEntry, 'the pruned lock record travels with the entry')
+  assert.equal(alpha.files, 1)
+  assert.ok(await fs.stat(path.join(trashRoot, alpha.id, 'alpha', 'SKILL.md')))
+
+  const restored = await restoreFromTrash([alpha.id], roots)
+  assert.equal(restored.ok, true)
+  assert.equal(restored.results[0].ok, true)
+  assert.equal(restored.results[0].lockRestored, true)
+  assert.ok(await fs.stat(path.join(skills, 'alpha', 'SKILL.md')))
+  const written = JSON.parse(await fs.readFile(lock, 'utf8'))
+  assert.deepEqual(Object.keys(written.skills), ['alpha'])
+  assert.equal((await listTrash(roots)).count, 1)
+})
+
+test('restores refuse to overwrite an existing skill directory', async () => {
+  const { skills, roots } = await makeHome()
+  await removeSkills(['beta'], roots, { confirm: CONFIRM_TOKEN })
+  const listed = await listTrash(roots)
+  await fs.mkdir(path.join(skills, 'beta'), { recursive: true })
+  await fs.writeFile(path.join(skills, 'beta', 'SKILL.md'), 'new')
+
+  const restored = await restoreFromTrash([listed.items[0].id], roots)
+  assert.equal(restored.ok, true)
+  assert.equal(restored.results[0].ok, false)
+  assert.equal(restored.results[0].reason, 'target-exists')
+  assert.equal(await fs.readFile(path.join(skills, 'beta', 'SKILL.md'), 'utf8'), 'new')
+  assert.equal((await listTrash(roots)).count, 1)
+})
+
+test('purges trash entries permanently', async () => {
+  const { skills, roots } = await makeHome()
+  await removeSkills(['beta'], roots, { confirm: CONFIRM_TOKEN })
+  const listed = await listTrash(roots)
+  const id = listed.items[0].id
+  const purged = await purgeTrash([id], roots)
+  assert.equal(purged.ok, true)
+  assert.equal(purged.results[0].ok, true)
+  assert.equal((await listTrash(roots)).count, 0)
+  await assert.rejects(fs.stat(path.join(skills, 'beta')))
+})
+
+test('mode purge deletes without leaving a trash entry', async () => {
+  const { roots } = await makeHome()
+  const result = await removeSkills(['beta'], roots, { confirm: CONFIRM_TOKEN, mode: 'purge' })
+  assert.equal(result.ok, true)
+  assert.deepEqual(result.trashed, [])
+  assert.deepEqual(result.deleted, ['beta'])
+  assert.equal((await listTrash(roots)).count, 0)
 })

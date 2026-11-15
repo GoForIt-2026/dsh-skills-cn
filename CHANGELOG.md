@@ -4,6 +4,31 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-15
+
+### Added
+
+- **Trash-first deletion**: by default the batch delete dialog now moves skill directories into
+  `<skills-root>/../.skill-trash/<id>/` instead of destroying them, so a mis-click is recoverable.
+  A checkbox in the dialog (“先移到回收站（可恢复）”, checked by default) switches to permanent
+  deletion, which shows an explicit irreversible warning.
+- **Trash panel**: a toolbar entry with a live count lists every trashed skill with its original path,
+  file count, size and removal time, and offers 恢复 / 彻底删除 per item plus 清空回收站 behind a
+  confirmation.
+- Each trash entry keeps a `meta.json` with the original root, path and the pruned `.skill-lock.json`
+  record; restoring puts the directory back **and** writes the lock record back, so the registry stays
+  consistent in both directions.
+- Restoring refuses to overwrite an existing directory (`target-exists`) and re-adds a lock record only
+  when it is missing.
+- Four new host tests (trash default, restore + lock write-back, restore-over-existing refusal, purge,
+  purge mode) — 12 cases total.
+
+### Changed
+
+- `POST /__dsh-skills-cn/delete` takes `mode: 'trash' | 'purge'` (default `trash`).
+- New routes: `/trash-list`, `/trash-restore`, `/trash-purge`.
+- README and plugin description document the trash flow, its location and how to empty it.
+
 ## [1.2.0] - 2026-11-15
 
 ### Added
