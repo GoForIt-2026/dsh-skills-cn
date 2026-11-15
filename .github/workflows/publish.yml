@@ -25,7 +25,21 @@ jobs:
           fi
       - name: Validate manifest and resources
         run: npm test
+      # A tag push must not turn red just because npm is not wired up yet: the
+      # publish step only runs when the NPM_TOKEN secret exists.
+      - name: Check for an npm token
+        id: npm_token
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=npm publish skipped::Add an NPM_TOKEN secret to publish tagged releases to npm."
+          fi
       - name: Publish to npm with provenance
+        if: steps.npm_token.outputs.present == 'true'
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

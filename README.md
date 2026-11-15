@@ -1,8 +1,11 @@
 # dsh-skills-cn
 
-[![npm](https://img.shields.io/npm/v/dsh-skills-cn)](https://www.npmjs.com/package/dsh-skills-cn)
-[![npm downloads](https://img.shields.io/npm/dm/dsh-skills-cn)](https://www.npmjs.com/package/dsh-skills-cn)
-[![license](https://img.shields.io/npm/l/dsh-skills-cn)](./LICENSE)
+**中文** | [English](README.en.md)
+
+[![ci](https://github.com/GoForIt-2026/dsh-skills-cn/actions/workflows/ci.yml/badge.svg)](https://github.com/GoForIt-2026/dsh-skills-cn/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/GoForIt-2026/dsh-skills-cn)](https://github.com/GoForIt-2026/dsh-skills-cn/releases)
+[![license](https://img.shields.io/github/license/GoForIt-2026/dsh-skills-cn)](./LICENSE)
+[![node](https://img.shields.io/badge/node-20%2B-3c873a)](https://nodejs.org)
 [![DeepSeek Harness plugin](https://img.shields.io/badge/DSH-plugin-4f46e5)](https://github.com/deepseek-ai/deepseek-harness)
 
 看中文，叫得出英文。给 DeepSeek Harness 加一个「技能管理」页签：把本机已装的技能按 **中文名 + 英文标识 + 中文说明** 列出来，选中一个就把 `/skill-name` 写进输入框——只写不发送。
@@ -24,7 +27,7 @@
 - **按来源分组**：左栏「全部技能 / 用户目录 / DSH 内置 / 插件提供 / 其他」带数量，点一下即筛选。分组的依据是 DSH 技能注册表里的 `source` 字段（不是从路径猜的），五组数量之和等于「全部技能」。
 - **提供方与目录两列**：每行显示注册它的 provider（如 `agent-skills`、`office`）和技能实际所在的目录；运行时注册、没有文件路径的技能会标「无目录（运行时注册）」。
 - **列宽可拖动**：每个列的右边缘都能拖，宽度记在本地；最后一个表头的 `⟲` 一键恢复默认。列变宽后表格横向滚动，不会被截断。
-- **三种排序**：「常用优先」（默认，次数相同按最近使用时间）、「名称字母序」、「按安装方式分组」。
+- **三种排序**：「常用优先」（默认，次数相同按最近使用时间）、「名称字母序」、「按来源排序」。
 - **分页**：每页 25 条，底部为页码条 + 总数 + 当前页；换页、换分组、改搜索都会回到第 1 页，**已选中的技能跨页保留**。
 - **使用频次**：每次成功引入记一次并记最近时间，行内显示「已用 N 次 / 未使用」；底部「清空使用记录」带二次确认。
 - **编辑中文**：任意一行都能改中文名与中文说明，保存后优先于内置词典；也能一键「恢复自动」。
@@ -90,20 +93,26 @@
 
 ## 安装
 
-需要 **DeepSeek Harness 0.2.x**（实测 `0.2.2-rc.3`，Desktop 与 Web 均可）。
+需要 **DeepSeek Harness 0.2.x**（实测 `0.2.2-rc.3`，Desktop 与 Web 均可），Node ≥ 20。
 
-### 方式一：npm 包（推荐）
+### 方式一：从 GitHub 直接装（推荐，复制一行就行）
+
+```bash
+dsh plugin --profile desktop add github:GoForIt-2026/dsh-skills-cn
+```
+
+DSH 会把这条 spec 交给 pnpm，从仓库按 `package.json` 的 `files` 打出包再装进 profile——不用 clone、不用编译、没有依赖。
+
+也可以下载 [最新 Release 的 `.tgz`](https://github.com/GoForIt-2026/dsh-skills-cn/releases/latest) 本地装：
+
+```bash
+dsh plugin --profile desktop add ./dsh-skills-cn-1.4.4.tgz
+```
+
+### 方式二：npm（发布到 npm 后可用）
 
 ```bash
 dsh plugin --profile desktop add dsh-skills-cn
-```
-
-把 `desktop` 换成你自己的 profile 名（Web 版一般是 `web`）。装完重启 DSH，再按下面的「启用」确认。
-
-### 方式二：GitHub 源码
-
-```bash
-dsh plugin --profile desktop add github:YOUR_GITHUB/dsh-skills-cn
 ```
 
 ### 方式三：本地目录
@@ -113,6 +122,8 @@ dsh plugin --profile desktop add github:YOUR_GITHUB/dsh-skills-cn
 ```bash
 dsh plugin --profile desktop add /path/to/dsh-skills-cn
 ```
+
+把 `desktop` 换成你自己的 profile 名（Web 版一般是 `web`）。装完重启 DSH，再按下面的「启用」确认。
 
 ### 启用与验证
 
@@ -198,13 +209,11 @@ dsh plugin --profile desktop add /path/to/dsh-skills-cn
 
 ## 重装系统 / 换机器怎么装回来
 
-只要仓库和 npm 包还在，三条命令即可回到可用状态：
+只要这个仓库还在，三条命令即可回到可用状态：
 
 ```bash
-# 1. 装 DSH 后，先装插件（二选一）
-dsh plugin --profile desktop add dsh-skills-cn
-# 或从源码
-dsh plugin --profile desktop add github:YOUR_GITHUB/dsh-skills-cn
+# 1. 装 DSH 后，先装插件（从 GitHub 一行搞定）
+dsh plugin --profile desktop add github:GoForIt-2026/dsh-skills-cn
 
 # 2. 重启 DSH
 # 3. 设置 → 插件 里确认「技能管理」已启用，刷新页面
@@ -215,21 +224,25 @@ dsh plugin --profile desktop add github:YOUR_GITHUB/dsh-skills-cn
 ## 开发
 
 ```bash
-npm test            # = node scripts/validate.mjs，检查 manifest/资源/语言包/详情图/图标
+npm test            # 自检 + 18 个 Host 单测（node --test）
+npm run validate    # 只跑发布前自检：manifest/资源/语言包/详情图/图标
+npm run test:host   # 只跑 Host 单测
 npm run pack:check  # 预览将要发布的文件清单
 ```
 
 目录结构：
 
 ```
-package.json          # dsh.bundle + dsh.client 清单
-index.js              # Host 半边（本插件无 Host 逻辑）
-client.js             # Client 半边：页签、列表、搜索、写入（__ModuleLoader__ 格式，无构建）
-cordis.patch.yml      # 插入 id 为 skill-manager 的 bundle 行
-locale/{en,zh}.json   # 插件页标题/描述/详情
-icon.svg              # 插件图标
-docs/                 # 详情图与 README 截图
-scripts/validate.mjs  # 发布前自检
+package.json            # dsh.bundle + dsh.client 清单
+index.js                # Host 半边：loopback 路由（/roots /catalog /preview /delete /trash-*）
+host/skills-core.js     # Host 核心：目录定位、回收站、.skill-lock.json 原子读写（纯函数，可单测）
+client.js               # Client 半边：页签、表格、搜索、写入、删除/回收站对话框（__ModuleLoader__ 格式，无构建）
+cordis.patch.yml        # 插入 id 为 skill-manager 的 bundle 行
+locale/{en,zh}.json     # 插件页标题/描述/详情
+icon.svg                # 插件图标
+docs/                   # 详情图与 README 截图
+scripts/validate.mjs    # 发布前自检
+scripts/test-host.mjs   # Host 单测（node:test）
 ```
 
 本地联调（不发布也能装）：
@@ -249,6 +262,13 @@ client 侧改动刷新页面即生效；改 `package.json` 或 `cordis.patch.yml
 **点插入没反应？** 会依次尝试写入输入框、设置草稿、复制到剪贴板；如果都不可用会提示失败并保留面板状态，不会假装成功。
 
 **显示 43 个技能，但我只装了 29 个？** 这里的数字是**当前会话可见的技能目录**（含预设自带的技能），不是 `~/.agents/skills` 的目录数。
+
+## 参与
+
+- 遇到问题 → [开 issue](https://github.com/GoForIt-2026/dsh-skills-cn/issues/new/choose)（有表单，会问版本和复现步骤）
+- 想改代码 → [贡献指南](CONTRIBUTING.md)；没有构建步骤，`npm test` 就是全部检查
+- 发现安全问题 → 走 [私密报告](SECURITY.md)，别开公开 issue
+- 版本变化 → [CHANGELOG](CHANGELOG.md)；英文说明见 [README.en.md](README.en.md)
 
 ## License
 

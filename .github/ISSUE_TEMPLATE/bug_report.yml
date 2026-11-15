@@ -1,0 +1,82 @@
+name: 问题反馈
+description: 报告一个 bug（界面、读取技能列表、删除/回收站、写入命令等）
+title: '[bug] '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        先谢谢反馈。提交前请确认：插件是最新版本，并且已经重启 DSH / 刷新过页面（`Ctrl+R`）。
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DSH 版本
+      description: 设置 → 关于，或 `dsh --version`
+      placeholder: 0.2.2-rc.3
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: 插件版本
+      description: 设置 → 插件 → 「技能管理」那一行
+      placeholder: 1.4.4
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: 系统
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 出问题的区域
+      options:
+        - 技能列表读不出来 / 数量不对
+        - 中文名或中文说明
+        - 搜索 / 分组 / 排序 / 分页
+        - 插入命令
+        - 批量删除 / 回收站
+        - 列宽 / 布局 / 主题
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开任一会话，点「技能管理」
+        2. 点「批量删除」，勾选 xxx
+        3. 点「删除选中…」
+        4. 看到 …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 报错信息 / 截图
+      description: 页面控制台（`Ctrl+Shift+I` → Console）的红色报错，或一张截图；可以直接粘贴图片。
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: skills
+    attributes:
+      label: 相关技能
+      description: 出问题的技能名（英文 id），以及它所在的目录（面板「目录」列可以悬停看完整路径）。
+      render: text
+    validations:
+      required: false

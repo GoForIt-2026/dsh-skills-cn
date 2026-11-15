@@ -39,14 +39,14 @@
     "中英对照"
   ],
   "license": "MIT",
-  "author": "YOUR_GITHUB",
+  "author": "GoForIt-2026",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR_GITHUB/dsh-skills-cn.git"
+    "url": "git+https://github.com/GoForIt-2026/dsh-skills-cn.git"
   },
-  "homepage": "https://github.com/YOUR_GITHUB/dsh-skills-cn#readme",
+  "homepage": "https://github.com/GoForIt-2026/dsh-skills-cn#readme",
   "bugs": {
-    "url": "https://github.com/YOUR_GITHUB/dsh-skills-cn/issues"
+    "url": "https://github.com/GoForIt-2026/dsh-skills-cn/issues"
   },
   "engines": {
     "node": ">=20",

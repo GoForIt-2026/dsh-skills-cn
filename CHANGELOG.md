@@ -216,4 +216,4 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Publish-time validation (`npm test`), locale-complete plugin metadata, feature image, icon,
   CI and tag-driven npm release workflows.
 
-[1.0.0]: https://github.com/YOUR_GITHUB/dsh-skills-cn/releases/tag/v1.0.0
+[1.0.0]: https://github.com/GoForIt-2026/dsh-skills-cn/releases/tag/v1.0.0

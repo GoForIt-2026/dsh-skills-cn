@@ -1,8 +1,11 @@
 # dsh-skills-cn
 
-[![npm](https://img.shields.io/npm/v/dsh-skills-cn)](https://www.npmjs.com/package/dsh-skills-cn)
-[![npm downloads](https://img.shields.io/npm/dm/dsh-skills-cn)](https://www.npmjs.com/package/dsh-skills-cn)
-[![license](https://img.shields.io/npm/l/dsh-skills-cn)](./LICENSE)
+[中文](README.md) | **English**
+
+[![ci](https://github.com/GoForIt-2026/dsh-skills-cn/actions/workflows/ci.yml/badge.svg)](https://github.com/GoForIt-2026/dsh-skills-cn/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/GoForIt-2026/dsh-skills-cn)](https://github.com/GoForIt-2026/dsh-skills-cn/releases)
+[![license](https://img.shields.io/github/license/GoForIt-2026/dsh-skills-cn)](./LICENSE)
+[![node](https://img.shields.io/badge/node-20%2B-3c873a)](https://nodejs.org)
 [![DeepSeek Harness plugin](https://img.shields.io/badge/DSH-plugin-4f46e5)](https://github.com/deepseek-ai/deepseek-harness)
 
 Read skills in Chinese, invoke them by their English id. A **Skills** view for DeepSeek Harness that lists every installed skill as *Chinese name + English id + Chinese description*, and writes the chosen `/skill-name` command into the composer — without sending it.
@@ -21,8 +24,10 @@ This plugin puts Chinese and English side by side: Chinese name on the left, the
 ## Features
 
 - **Bilingual rows**: Chinese name (bold), English `name` (monospace, grey), one-line Chinese description, usage count and source tag.
-- **Source groups**: the left column lists All skills / npm install / GitHub (manual) / DSH market / Other sources with counts, and a click filters the list. The five counts add up to All skills.
-- **Three sort orders**: most used (default, ties by most recent), name A→Z, grouped by source.
+- **Source groups**: the left column lists All skills / User folders / DSH bundled / Plugin provided / Other with counts, and a click filters the list. The group comes from the registry's `source` field (never guessed from the path), and the five counts add up to All skills.
+- **Provider and directory columns**: each row shows the registering provider (`agent-skills`, `office`, …) and where the skill lives on disk; runtime-registered skills without a path read “no directory (runtime)”.
+- **Draggable column widths**: every column edge resizes, widths persist locally, and a `⟲` button in the last header restores the defaults. Columns that no longer fit scroll horizontally.
+- **Three sort orders**: most used (default, ties by most recent), name A→Z, by source.
 - **Paging**: 25 rows per page with numbered page buttons, total and page indicator; changing the search, group or sort returns to page 1 while the selection survives.
 - **Usage counters**: each successful insert records a count and a last-used time, shown per row and clearable from the footer behind a confirmation.
 - **Chinese overrides**: edit the Chinese name and description of any row; the manual entry always wins over the bundled dictionary and can be restored.
@@ -82,20 +87,26 @@ Each plugin makes a different trade-off; this one does a single thing — **let 
 
 ## Install
 
-Requires **DeepSeek Harness 0.2.x** (verified on `0.2.2-rc.3`, both Desktop and Web).
+Requires **DeepSeek Harness 0.2.x** (verified on `0.2.2-rc.3`, both Desktop and Web) and Node ≥ 20.
 
-### npm (recommended)
+### From GitHub (recommended — one line)
+
+```bash
+dsh plugin --profile desktop add github:GoForIt-2026/dsh-skills-cn
+```
+
+DSH hands that spec to pnpm, which packs the repository according to `package.json`'s `files` and installs it into the profile — no clone, no build step, no dependencies.
+
+You can also grab the [latest release `.tgz`](https://github.com/GoForIt-2026/dsh-skills-cn/releases/latest):
+
+```bash
+dsh plugin --profile desktop add ./dsh-skills-cn-1.4.4.tgz
+```
+
+### From npm (once published)
 
 ```bash
 dsh plugin --profile desktop add dsh-skills-cn
-```
-
-Replace `desktop` with your profile name (`web` for the web profile). Restart DSH, then check the enablement step below.
-
-### From GitHub
-
-```bash
-dsh plugin --profile desktop add github:YOUR_GITHUB/dsh-skills-cn
 ```
 
 ### From a local checkout
@@ -105,6 +116,8 @@ Settings → **Plugins** → **Add plugin** → pick the cloned directory, or:
 ```bash
 dsh plugin --profile desktop add /path/to/dsh-skills-cn
 ```
+
+Replace `desktop` with your profile name (`web` for the web profile). Restart DSH, then check the enablement step below.
 
 ### Enable and verify
 
@@ -190,12 +203,10 @@ The only DSH internal it depends on is **`skills/list`** — the same catalog th
 
 ## Reinstalling on a new machine
 
-The plugin has no configuration to back up; two commands bring it back:
+The plugin has no configuration to back up; one line brings it back:
 
 ```bash
-dsh plugin --profile desktop add dsh-skills-cn
-# or, from source
-dsh plugin --profile desktop add github:YOUR_GITHUB/dsh-skills-cn
+dsh plugin --profile desktop add github:GoForIt-2026/dsh-skills-cn
 ```
 
 Restart DSH, confirm the row is enabled in **Settings → Plugins**, reload the page.
@@ -203,21 +214,25 @@ Restart DSH, confirm the row is enabled in **Settings → Plugins**, reload the 
 ## Development
 
 ```bash
-npm test            # node scripts/validate.mjs — manifest, files, locales, detail image, icon
+npm test            # self check + 18 host unit tests (node --test)
+npm run validate    # manifest, files, locales, detail image, icon
+npm run test:host   # host unit tests only
 npm run pack:check  # preview the published file list
 ```
 
 Layout:
 
 ```
-package.json          # dsh.bundle + dsh.client manifest
-index.js              # host half (no host logic here)
-client.js             # client half: tab, list, search, insert (__ModuleLoader__ format, no build)
-cordis.patch.yml      # inserts the bundle row with id skill-manager
-locale/{en,zh}.json   # plugin page title/description/detail
-icon.svg              # plugin icon
-docs/                 # detail image and README screenshots
-scripts/validate.mjs  # pre-publish self check
+package.json            # dsh.bundle + dsh.client manifest
+index.js                # host half: loopback routes (/roots /catalog /preview /delete /trash-*)
+host/skills-core.js     # host core: locate, trash, atomic .skill-lock.json (pure, unit tested)
+client.js               # client half: tab, table, search, insert, delete/trash dialogs (__ModuleLoader__, no build)
+cordis.patch.yml        # inserts the bundle row with id skill-manager
+locale/{en,zh}.json     # plugin page title/description/detail
+icon.svg                # plugin icon
+docs/                   # detail image and README screenshots
+scripts/validate.mjs    # pre-publish self check
+scripts/test-host.mjs   # host unit tests (node:test)
 ```
 
 Local iteration:
@@ -237,6 +252,13 @@ Client-side edits apply on page reload; `package.json` or `cordis.patch.yml` cha
 **Insert does nothing.** It falls back from the composer API to the draft API to the clipboard; if all fail it reports the failure and keeps the panel state rather than pretending.
 
 **It shows 43 skills but I installed 29.** The number is the *session-visible* catalog, which includes skills contributed by the agent preset, not just `~/.agents/skills`.
+
+## Contributing
+
+- Found a bug → [open an issue](https://github.com/GoForIt-2026/dsh-skills-cn/issues/new/choose) (the form asks for versions and reproduction steps)
+- Want to change code → [CONTRIBUTING.md](CONTRIBUTING.md); there is no build step and `npm test` is the whole check
+- Security problem → [report privately](SECURITY.md), please not in a public issue
+- Version history → [CHANGELOG](CHANGELOG.md); 中文说明见 [README.md](README.md)
 
 ## License
 
