@@ -20,13 +20,19 @@ This plugin puts Chinese and English side by side: Chinese name on the left, the
 
 ## Features
 
-- **Bilingual rows**: Chinese name (bold), English `name` (monospace, grey), one-line Chinese description, source tag.
+- **Bilingual rows**: Chinese name (bold), English `name` (monospace, grey), one-line Chinese description, usage count and source tag.
+- **Source groups**: a left column with All skills / npm install / GitHub (manual) / DSH market and their counts; a click filters the list. Skills whose source cannot be derived stay under All skills and are tagged *Other*.
+- **Three sort orders**: most used (default, ties by most recent), name A→Z, grouped by source.
+- **Paging**: 25 rows per page with numbered page buttons, total and page indicator; changing the search, group or sort returns to page 1 while the selection survives.
+- **Usage counters**: each successful insert records a count and a last-used time, shown per row and clearable from the footer behind a confirmation.
+- **Chinese overrides**: edit the Chinese name and description of any row; the manual entry always wins over the bundled dictionary and can be restored.
+- **Expandable rows**: English source description, `whenToUse` and the skill path.
 - **Instant search** across Chinese name, Chinese description, English id and the original English description.
-- **One-click insert**: double-click a row, press `Enter`, or click **Insert**; `/skill-name ` is appended to the composer and the caret stays at the end. **Nothing is sent.**
+- **One-click insert**: double-click, `Enter`, or the row's **Insert** button appends `/skill-name ` to the composer; the caret stays at the end and **nothing is sent**. The same command is not written twice.
+- **Remembered view state**: group, sort and page survive a reload; the selected skill does not, so nothing is inserted by accident.
 - **Read-only**: no skill directory or `SKILL.md` is created, changed or removed; the English `name` is never rewritten.
-- **Offline**: Chinese text comes from a bundled dictionary — no network, no model call, no quota.
-- **Theme and locale aware**: colours are theme tokens (`--dsw-alias-*`), UI strings come from the locale dictionaries.
-- **Responsive**: when the right sidebar squeezes the view, the four-column table collapses into a stacked name/id/description layout.
+- **Offline**: Chinese text comes from the bundled dictionary plus your own edits — no network, no model call.
+- **Theme and locale aware**, with a stacked layout on narrow views.
 
 ## How it differs from similar plugins
 
@@ -73,20 +79,34 @@ Open **Settings → Plugins** and make sure the “Skill manager (Chinese)” ro
 ## Usage
 
 1. Open any conversation and click the **Skills** tab.
-2. Search in Chinese (“视频”, “表格”) or English (`sheet`, `test`).
-3. `↑` / `↓` to move, `Enter` to insert — or double-click a row, or click **Insert**.
-4. The composer now holds `/api-and-interface-design`; write your request after it and press Enter yourself.
-5. `Esc` clears the search.
+2. Filter with the left column, or search in Chinese (“视频”, “表格”) or English (`sheet`, `test`).
+3. Switch the sort order in the toolbar; page through the list at the bottom when there are more than 25 rows.
+4. `↑` / `↓` to move, `Enter` to insert — or double-click a row, or click **Insert**.
+5. The composer now holds `/api-and-interface-design`; write your request after it and press Enter yourself.
+6. To edit the Chinese text, use ✎ on the row (or the button in the expanded area). Clear usage records from the footer.
+7. `Esc` clears the search; `▸` expands the English source and the skill path.
 
 ## Where the Chinese comes from
 
-`client.js` ships a **TERMS** dictionary (46 entries today) keyed by the skill's English `name`, each mapping to `[Chinese name, Chinese description]`. Skills that are not in the dictionary do not disappear: they render their English name and description with a small “no Chinese entry” marker.
+`client.js` ships a **TERMS** dictionary (46 entries today) keyed by the skill's English `name`, each mapping to `[Chinese name, Chinese description]`. Skills that are not in the dictionary do not disappear: they render their English name and description with a small “no Chinese entry” marker — use ✎ to add one, and that manual entry wins from then on.
 
-Adding an entry is one line — edit `TERMS` in `client.js` and open a PR:
+Adding an entry to the dictionary itself is one line — edit `TERMS` in `client.js` and open a PR:
 
 ```js
 'markdown-export': ['Markdown 导出', '把会话导出成 Markdown 文件'],
 ```
+
+## Where the data lives
+
+Only three `localStorage` keys, never the skill directories:
+
+| Key | Contents |
+|---|---|
+| `dsh-skills-cn/cache/v1` | Your manual Chinese name/description overrides |
+| `dsh-skills-cn/usage/v1` | Usage counts and last-used times |
+| `dsh-skills-cn/ui/v1` | Last group, sort order and page |
+
+Clearing them resets the plugin; no skill file is touched.
 
 ## Compatibility
 

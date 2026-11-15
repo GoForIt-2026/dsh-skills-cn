@@ -7,15 +7,35 @@ window.__ModuleLoader__.load({
 
     const NS = 'skillManager';
     const MONO = 'ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace';
+    const PAGE_SIZE = 25;
+    const STORE = {
+      cache: 'dsh-skills-cn/cache/v1',
+      usage: 'dsh-skills-cn/usage/v1',
+      ui: 'dsh-skills-cn/ui/v1'
+    };
+    const GROUPS = ['all', 'npm', 'github', 'market'];
+    const SORTS = ['usage', 'name', 'source'];
 
     const zh = {
       tab: '技能管理',
       title: '技能管理',
       subtitle: '本机已安装的技能都在这里。选中一个，把它的斜杠命令写进输入框，不会自动发送。',
       search: '搜索技能：中文名、中文说明、英文标识都能搜',
+      groupAll: '全部技能',
+      groupNpm: 'npm 安装',
+      groupGithub: 'GitHub 手动安装',
+      groupMarket: 'DSH 内部市场安装',
+      sourceAll: '全部来源',
+      filterSource: '按安装方式筛选',
+      sortLabel: '排序',
+      sortUsage: '常用优先',
+      sortName: '名称字母序',
+      sortSource: '按安装方式分组',
+      refresh: '刷新',
       colName: '中文名称',
       colEn: '英文标识',
       colDesc: '中文说明',
+      colUsage: '使用',
       colSource: '来源',
       insert: '插入',
       inserted: '已插入 {cmd}',
@@ -28,12 +48,43 @@ window.__ModuleLoader__.load({
       emptyNone: '本机还没有安装技能',
       emptyNoneBody: '把技能包装到 ~/.agents/skills 后重新打开本页。',
       emptySearch: '没有匹配的技能',
-      emptySearchBody: '换个关键词，或者清空搜索。',
-      clear: '清空搜索',
+      emptySearchBody: '换个关键词，或者清空搜索与筛选。',
+      clear: '清空搜索与筛选',
       total: '共 {n} 个技能',
+      countInGroup: '共 {n} 个',
       readonly: '只读 · 不会修改任何技能文件',
       untranslated: '未收录中文',
-      hint: '↑↓ 选择 · Enter 插入 · / 搜索'
+      hint: '↑↓ 选择 · Enter 插入 · / 搜索',
+      usedN: '已用 {n} 次',
+      neverUsed: '未使用',
+      lastAt: '最近 {time}',
+      selected: '已选中：{name} / {id}',
+      clearSelection: '取消选择',
+      more: '展开英文原文',
+      less: '收起',
+      whenToUse: '适用场景',
+      pathLabel: '路径',
+      edit: '编辑中文对照',
+      editTitle: '编辑「{name}」的中文对照',
+      editName: '中文名称',
+      editDesc: '中文说明',
+      editPlaceholderName: '例如：剪映视频剪辑',
+      editPlaceholderDesc: '例如：剪映专业版剪辑、字幕、配乐与导出',
+      save: '保存',
+      cancel: '取消',
+      restore: '恢复自动',
+      saved: '已保存中文对照',
+      restored: '已恢复为内置对照',
+      resetUsage: '清空使用记录',
+      resetTitle: '清空全部使用记录？',
+      resetBody: '会删除所有技能的使用次数与最近使用时间，列表将回到默认顺序。该操作不可撤销。',
+      resetOk: '确认清空',
+      resetDone: '使用记录已清空',
+      pagerPrev: '上一页',
+      pagerNext: '下一页',
+      pagerInfo: '共 {n} 项 · 第 {page}/{pages} 页',
+      noDesc: '暂无描述',
+      other: '其他'
     };
 
     const en = {
@@ -41,9 +92,21 @@ window.__ModuleLoader__.load({
       title: 'Skills',
       subtitle: 'Every skill installed on this machine. Pick one to write its slash command into the composer; nothing is sent.',
       search: 'Search by Chinese name, English name, or description',
+      groupAll: 'All skills',
+      groupNpm: 'npm install',
+      groupGithub: 'GitHub (manual)',
+      groupMarket: 'DSH market',
+      sourceAll: 'All sources',
+      filterSource: 'Filter by source',
+      sortLabel: 'Sort',
+      sortUsage: 'Most used',
+      sortName: 'Name A→Z',
+      sortSource: 'Group by source',
+      refresh: 'Refresh',
       colName: 'Chinese name',
       colEn: 'English name',
       colDesc: 'Description',
+      colUsage: 'Usage',
       colSource: 'Source',
       insert: 'Insert',
       inserted: 'Inserted {cmd}',
@@ -56,12 +119,43 @@ window.__ModuleLoader__.load({
       emptyNone: 'No skills installed yet',
       emptyNoneBody: 'Add a skill pack under ~/.agents/skills, then reopen this page.',
       emptySearch: 'No matching skill',
-      emptySearchBody: 'Try another keyword, or clear the search.',
-      clear: 'Clear search',
+      emptySearchBody: 'Try another keyword, or clear the search and filters.',
+      clear: 'Clear search and filters',
       total: '{n} skills',
+      countInGroup: '{n} in total',
       readonly: 'Read-only · no skill file is modified',
       untranslated: 'no Chinese entry',
-      hint: '↑↓ select · Enter insert · / search'
+      hint: '↑↓ select · Enter insert · / search',
+      usedN: 'used {n}×',
+      neverUsed: 'unused',
+      lastAt: 'last {time}',
+      selected: 'Selected: {name} / {id}',
+      clearSelection: 'Clear selection',
+      more: 'Show English source',
+      less: 'Hide',
+      whenToUse: 'When to use',
+      pathLabel: 'Path',
+      edit: 'Edit Chinese entry',
+      editTitle: 'Edit the Chinese entry of “{name}”',
+      editName: 'Chinese name',
+      editDesc: 'Chinese description',
+      editPlaceholderName: 'e.g. 剪映视频剪辑',
+      editPlaceholderDesc: 'e.g. 剪映专业版剪辑、字幕、配乐与导出',
+      save: 'Save',
+      cancel: 'Cancel',
+      restore: 'Restore built-in',
+      saved: 'Chinese entry saved',
+      restored: 'Restored the built-in entry',
+      resetUsage: 'Clear usage records',
+      resetTitle: 'Clear all usage records?',
+      resetBody: 'Every usage count and last-used time is deleted and the list returns to its default order. This cannot be undone.',
+      resetOk: 'Clear',
+      resetDone: 'Usage records cleared',
+      pagerPrev: 'Previous',
+      pagerNext: 'Next',
+      pagerInfo: '{n} items · page {page}/{pages}',
+      noDesc: 'No description',
+      other: 'Other'
     };
 
     // Bundled Chinese index for common skill packs: SKILL.md `name` -> [中文名, 中文说明].
@@ -111,8 +205,10 @@ window.__ModuleLoader__.load({
       'workflow-run-state': ['工作流运行状态', '记录并恢复工作流实例的执行进度']
     };
 
-    const SOURCES = { npm: 'npm', github: 'GitHub', market: '市场', other: '其他' };
+    const SOURCE_LABEL = { npm: 'npm', github: 'GitHub', market: '市场', other: '其他' };
+    const SOURCE_ORDER = { npm: 0, github: 1, market: 2, other: 3 };
 
+    // ---------------------------------------------------------------- helpers
     function sourceOf(path) {
       if (!path) return 'other';
       const p = String(path).toLowerCase().replace(/\\/g, '/');
@@ -130,9 +226,10 @@ window.__ModuleLoader__.load({
       return {
         name: name,
         description: typeof entry.description === 'string' ? entry.description : '',
+        whenToUse: typeof entry.whenToUse === 'string' ? entry.whenToUse : '',
         path: typeof entry.path === 'string' ? entry.path : '',
-        zhName: term ? term[0] : '',
-        zhDesc: term ? term[1] : '',
+        dictName: term ? term[0] : '',
+        dictDesc: term ? term[1] : '',
         source: sourceOf(entry.path)
       };
     }
@@ -192,26 +289,55 @@ window.__ModuleLoader__.load({
         try {
           if (typeof inputActions.captureInsertion === 'function' && typeof inputActions.insertText === 'function') {
             const span = inputActions.captureInsertion();
-            if (inputActions.insertText(text, span)) return 'composer';
+            if (inputActions.insertText(text, span)) return { how: 'composer', rev: span && span.draftRev };
           }
         } catch (error) { /* try the next capability */ }
         try {
           if (typeof inputActions.setDraft === 'function') {
             inputActions.setDraft(text);
-            return 'composer';
+            return { how: 'composer' };
           }
         } catch (error) { /* fall through */ }
       }
       try {
         if (typeof navigator !== 'undefined' && navigator.clipboard && typeof name === 'string') {
           navigator.clipboard.writeText('/' + name);
-          return 'clipboard';
+          return { how: 'clipboard' };
         }
       } catch (error) { /* reported as failure */ }
-      return 'failed';
+      return { how: 'failed' };
     }
 
-    const ROW_COLS = 'minmax(0,1.05fr) minmax(0,1fr) minmax(0,1.5fr) 96px';
+    function loadStore(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        const value = JSON.parse(raw);
+        return value && typeof value === 'object' ? value : fallback;
+      } catch (error) {
+        return fallback;
+      }
+    }
+
+    function saveStore(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch (error) { /* storage unavailable */ }
+    }
+
+    function relTime(at, locale) {
+      if (!at) return '';
+      const diff = Date.now() - at;
+      const minute = 60 * 1000;
+      const hour = 60 * minute;
+      const day = 24 * hour;
+      if (diff < minute) return '<1m';
+      if (diff < hour) return Math.floor(diff / minute) + 'm';
+      if (diff < day) return Math.floor(diff / hour) + 'h';
+      if (diff < 30 * day) return Math.floor(diff / day) + 'd';
+      return new Date(at).toISOString().slice(0, 10);
+    }
+
+    // ----------------------------------------------------------------- styles
+    const ROW_COLS = 'minmax(140px,1.1fr) minmax(110px,1fr) minmax(0,1.4fr) 64px 84px';
     const NARROW_COLS = 'minmax(0,1fr) 84px';
 
     const S = {
@@ -221,69 +347,115 @@ window.__ModuleLoader__.load({
         color: 'var(--dsw-alias-label-primary)', fontFamily: 'inherit'
       },
       head: { display: 'flex', alignItems: 'flex-start', gap: '12px', flex: '0 0 auto' },
+      avatar: {
+        flex: '0 0 auto', width: '26px', height: '26px', marginTop: '1px',
+        borderRadius: '8px', display: 'grid', placeItems: 'center',
+        color: '#fff', fontSize: '13px', fontWeight: 600,
+        background: 'var(--dsw-alias-brand-primary)'
+      },
       titles: { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 },
       h1: { margin: 0, fontSize: '15px', fontWeight: 600, letterSpacing: '0.2px' },
       sub: { margin: 0, fontSize: '12px', lineHeight: 1.55, color: 'var(--dsw-alias-label-secondary)' },
-      count: {
+      chip: {
+        flex: '0 0 auto', fontSize: '11.5px', padding: '3px 9px', whiteSpace: 'nowrap',
+        borderRadius: '999px', color: 'var(--dsw-alias-label-secondary)',
+        background: 'transparent', border: '1px solid var(--dsw-alias-border-l1)'
+      },
+      countChip: {
         marginLeft: 'auto', flex: '0 0 auto', fontSize: '12px', padding: '3px 10px',
         whiteSpace: 'nowrap', borderRadius: '999px',
         color: 'var(--dsw-alias-label-secondary)',
         background: 'var(--dsw-alias-bg-layer-2)',
         border: '1px solid var(--dsw-alias-border-l1)'
       },
-      chip: {
-        flex: '0 0 auto', fontSize: '11.5px', padding: '3px 9px', whiteSpace: 'nowrap',
-        borderRadius: '999px', color: 'var(--dsw-alias-label-secondary)',
-        background: 'transparent', border: '1px solid var(--dsw-alias-border-l1)'
+      card: {
+        flex: '0 1 auto', minHeight: '0px', display: 'flex', flexDirection: 'row',
+        overflow: 'hidden', borderRadius: '12px',
+        background: 'var(--dsw-alias-bg-layer-1)',
+        border: '1px solid var(--dsw-alias-border-l1)'
+      },
+      groups: {
+        flex: '0 0 auto', width: '188px', display: 'flex', flexDirection: 'column',
+        gap: '2px', padding: '10px 8px', boxSizing: 'border-box',
+        borderRight: '1px solid var(--dsw-alias-border-l1)',
+        overflowY: 'auto'
+      },
+      groupTitle: { fontSize: '11px', color: 'var(--dsw-alias-label-secondary)', padding: '2px 8px 6px' },
+      groupItem: function (active) {
+        return {
+          display: 'flex', alignItems: 'center', gap: '6px', width: '100%',
+          padding: '7px 9px', borderRadius: '8px', cursor: 'pointer',
+          fontSize: '12.5px', textAlign: 'left', fontFamily: 'inherit',
+          color: active ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-primary)',
+          background: active ? 'var(--dsw-alias-bg-layer-2)' : 'transparent',
+          border: '1px solid ' + (active ? 'var(--dsw-alias-border-l1)' : 'transparent')
+        };
+      },
+      groupLabel: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+      groupCount: { fontSize: '11px', color: 'var(--dsw-alias-label-secondary)', fontVariantNumeric: 'tabular-nums' },
+      main: { flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column' },
+      toolbar: {
+        display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px',
+        borderBottom: '1px solid var(--dsw-alias-border-l1)', flex: '0 0 auto'
       },
       searchWrap: {
-        display: 'flex', alignItems: 'center', gap: '8px', flex: '0 0 auto', height: '36px',
-        padding: '0 11px', borderRadius: '10px',
-        background: 'var(--dsw-alias-bg-layer-1)',
+        display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', minWidth: '120px',
+        height: '32px', padding: '0 10px', borderRadius: '9px',
+        background: 'var(--dsw-alias-bg-base)',
         border: '1px solid var(--dsw-alias-border-l1)'
       },
       input: {
         flex: 1, minWidth: 0, border: 0, outline: 0, background: 'transparent',
-        fontSize: '13px', fontFamily: 'inherit', color: 'var(--dsw-alias-label-primary)'
+        fontSize: '12.5px', fontFamily: 'inherit', color: 'var(--dsw-alias-label-primary)'
       },
-      slash: { fontSize: '11px', color: 'var(--dsw-alias-label-secondary)', fontFamily: MONO },
-      card: {
-        flex: '0 1 auto', minHeight: '0px',
-        display: 'flex', flexDirection: 'column', overflow: 'hidden',
-        borderRadius: '12px',
-        background: 'var(--dsw-alias-bg-layer-1)',
+      select: {
+        height: '32px', padding: '0 8px', borderRadius: '9px', fontSize: '12px',
+        fontFamily: 'inherit', color: 'var(--dsw-alias-label-primary)',
+        background: 'var(--dsw-alias-bg-base)',
         border: '1px solid var(--dsw-alias-border-l1)'
+      },
+      iconBtn: {
+        flex: '0 0 auto', height: '32px', padding: '0 10px', borderRadius: '9px',
+        fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit',
+        color: 'var(--dsw-alias-label-primary)', background: 'transparent',
+        border: '1px solid var(--dsw-alias-border-l1)', display: 'flex', alignItems: 'center', gap: '6px'
       },
       thead: function (narrow) {
         return {
           display: 'grid', gridTemplateColumns: narrow ? NARROW_COLS : ROW_COLS,
-          gap: '14px', alignItems: 'center',
-          flex: '0 0 auto', height: '32px', padding: '0 14px', fontSize: '11.5px',
+          gap: '14px', alignItems: 'center', flex: '0 0 auto', height: '30px',
+          padding: '0 14px', fontSize: '11px',
           color: 'var(--dsw-alias-label-secondary)',
           borderBottom: '1px solid var(--dsw-alias-border-l1)'
         };
       },
-      list: { flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' },
-      row: function (selected, hovered, narrow) {
+      list: { flex: '1 1 auto', minHeight: '0', overflowY: 'auto', overflowX: 'hidden' },
+      row: function (active, hovered, narrow) {
         return {
           display: 'grid', gridTemplateColumns: narrow ? NARROW_COLS : ROW_COLS,
           gap: '14px', alignItems: 'center',
-          minHeight: '54px', padding: narrow ? '8px 14px' : '0 14px',
+          minHeight: narrow ? '0px' : '52px', padding: narrow ? '8px 14px' : '0 14px',
           position: 'relative', cursor: 'pointer',
           borderBottom: '1px solid var(--dsw-alias-border-l1)',
-          background: selected ? 'var(--dsw-alias-bg-layer-2)'
+          background: active ? 'var(--dsw-alias-bg-layer-2)'
             : hovered ? 'var(--dsw-alias-bg-base)' : 'transparent'
         };
       },
       accent: {
-        position: 'absolute', left: 0, top: '9px', bottom: '9px', width: '3px',
+        position: 'absolute', left: 0, top: '8px', bottom: '8px', width: '3px',
         borderRadius: '0 3px 3px 0', background: 'var(--dsw-alias-brand-primary)'
       },
-      zhName: {
-        display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600,
-        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+      nameCell: { display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 },
+      chevron: {
+        flex: '0 0 auto', width: '16px', height: '16px', display: 'grid', placeItems: 'center',
+        borderRadius: '4px', cursor: 'pointer', fontSize: '10px', lineHeight: 1,
+        color: 'var(--dsw-alias-label-secondary)', background: 'transparent', border: 0
       },
-      badge: { fontSize: '10.5px', fontWeight: 400, color: 'var(--dsw-alias-label-secondary)' },
+      zhName: {
+        fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden',
+        textOverflow: 'ellipsis'
+      },
+      badge: { fontSize: '10.5px', fontWeight: 400, color: 'var(--dsw-alias-label-secondary)', marginLeft: '4px' },
       enName: {
         fontSize: '11.5px', fontFamily: MONO, whiteSpace: 'nowrap', overflow: 'hidden',
         textOverflow: 'ellipsis', color: 'var(--dsw-alias-label-secondary)'
@@ -292,48 +464,106 @@ window.__ModuleLoader__.load({
         fontSize: '12.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         color: 'var(--dsw-alias-label-secondary)'
       },
+      usage: {
+        fontSize: '11.5px', color: 'var(--dsw-alias-label-secondary)', whiteSpace: 'nowrap',
+        fontVariantNumeric: 'tabular-nums'
+      },
       tag: function (market) {
         return {
-          justifySelf: 'start', fontSize: '11px', lineHeight: 1, padding: '4px 8px',
+          justifySelf: 'start', fontSize: '10.5px', lineHeight: 1, padding: '4px 7px',
           borderRadius: '999px', whiteSpace: 'nowrap',
           color: market ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-secondary)',
           background: 'var(--dsw-alias-bg-layer-2)',
           border: '1px solid var(--dsw-alias-border-l1)'
         };
       },
-      insertBtn: {
-        justifySelf: 'start', fontSize: '11.5px', padding: '4px 10px', cursor: 'pointer',
-        borderRadius: '999px', fontFamily: 'inherit',
-        color: 'var(--dsw-alias-brand-primary)',
-        background: 'transparent',
-        border: '1px solid var(--dsw-alias-brand-primary)'
+      actions: { display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-start' },
+      actBtn: {
+        fontSize: '11px', padding: '3px 8px', cursor: 'pointer', borderRadius: '999px',
+        fontFamily: 'inherit', color: 'var(--dsw-alias-brand-primary)',
+        background: 'transparent', border: '1px solid var(--dsw-alias-brand-primary)'
       },
+      actIcon: {
+        fontSize: '11px', width: '22px', height: '22px', display: 'grid', placeItems: 'center',
+        cursor: 'pointer', borderRadius: '999px', fontFamily: 'inherit',
+        color: 'var(--dsw-alias-label-secondary)', background: 'transparent',
+        border: '1px solid var(--dsw-alias-border-l1)'
+      },
+      expanded: {
+        padding: '10px 14px 12px 34px', borderBottom: '1px solid var(--dsw-alias-border-l1)',
+        background: 'var(--dsw-alias-bg-base)', display: 'flex', flexDirection: 'column', gap: '6px',
+        fontSize: '12px', color: 'var(--dsw-alias-label-secondary)'
+      },
+      kv: { display: 'flex', gap: '8px', alignItems: 'flex-start' },
+      kvKey: { flex: '0 0 64px', color: 'var(--dsw-alias-label-secondary)', fontSize: '11px', paddingTop: '1px' },
+      kvVal: { flex: '1 1 auto', minWidth: 0, color: 'var(--dsw-alias-label-primary)', wordBreak: 'break-word' },
+      monoVal: { flex: '1 1 auto', minWidth: 0, fontFamily: MONO, fontSize: '11.5px', wordBreak: 'break-all' },
       footer: {
-        display: 'flex', alignItems: 'center', gap: '10px', flex: '0 0 auto', padding: '0 2px',
-        fontSize: '11.5px', color: 'var(--dsw-alias-label-secondary)'
+        display: 'flex', alignItems: 'center', gap: '10px', flex: '0 0 auto',
+        padding: '8px 14px', borderTop: '1px solid var(--dsw-alias-border-l1)',
+        fontSize: '11.5px', color: 'var(--dsw-alias-label-secondary)', minHeight: '38px'
+      },
+      pager: { display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' },
+      pageBtn: function (active) {
+        return {
+          minWidth: '24px', height: '24px', padding: '0 6px', borderRadius: '6px',
+          fontSize: '11.5px', cursor: 'pointer', fontFamily: 'inherit',
+          color: active ? '#fff' : 'var(--dsw-alias-label-primary)',
+          background: active ? 'var(--dsw-alias-brand-primary)' : 'transparent',
+          border: '1px solid ' + (active ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-border-l1)')
+        };
+      },
+      linkBtn: {
+        padding: 0, border: 0, background: 'transparent', cursor: 'pointer',
+        color: 'var(--dsw-alias-brand-primary)', fontFamily: 'inherit', fontSize: 'inherit'
       },
       state: {
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', gap: '8px', padding: '40px 24px', textAlign: 'center'
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: '8px', padding: '44px 24px', textAlign: 'center', flex: '1 1 auto'
       },
       stateTitle: { fontSize: '13px', fontWeight: 600 },
-      stateBody: {
-        fontSize: '12.5px', lineHeight: 1.6, maxWidth: '380px',
-        color: 'var(--dsw-alias-label-secondary)'
-      },
+      stateBody: { fontSize: '12.5px', lineHeight: 1.6, maxWidth: '380px', color: 'var(--dsw-alias-label-secondary)' },
       button: {
         marginTop: '4px', padding: '5px 12px', borderRadius: '8px', fontSize: '12.5px',
-        cursor: 'pointer', fontFamily: 'inherit',
-        color: 'var(--dsw-alias-label-primary)',
-        background: 'transparent',
-        border: '1px solid var(--dsw-alias-border-l2)'
+        cursor: 'pointer', fontFamily: 'inherit', color: 'var(--dsw-alias-label-primary)',
+        background: 'transparent', border: '1px solid var(--dsw-alias-border-l2)'
+      },
+      primary: {
+        marginTop: '4px', padding: '5px 12px', borderRadius: '8px', fontSize: '12.5px',
+        cursor: 'pointer', fontFamily: 'inherit', color: '#fff',
+        background: 'var(--dsw-alias-brand-primary)', border: '1px solid var(--dsw-alias-brand-primary)'
+      },
+      scrim: {
+        position: 'absolute', inset: 0, background: 'rgba(16,24,40,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5, borderRadius: '12px'
+      },
+      modal: {
+        width: '420px', maxWidth: 'calc(100% - 40px)', boxSizing: 'border-box',
+        background: 'var(--dsw-alias-bg-overlay)', color: 'var(--dsw-alias-label-primary)',
+        border: '1px solid var(--dsw-alias-border-l1)', borderRadius: '12px',
+        boxShadow: '0 18px 48px rgba(16,24,40,0.24)', padding: '16px 18px',
+        display: 'flex', flexDirection: 'column', gap: '10px'
+      },
+      modalTitle: { fontSize: '13.5px', fontWeight: 600 },
+      modalBody: { fontSize: '12.5px', lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)' },
+      field: { display: 'flex', flexDirection: 'column', gap: '4px' },
+      fieldLabel: { fontSize: '11.5px', color: 'var(--dsw-alias-label-secondary)' },
+      fieldInput: {
+        height: '32px', padding: '0 10px', borderRadius: '8px', fontFamily: 'inherit',
+        fontSize: '12.5px', color: 'var(--dsw-alias-label-primary)',
+        background: 'var(--dsw-alias-bg-base)', border: '1px solid var(--dsw-alias-border-l1)'
+      },
+      modalRow: { display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', marginTop: '2px' },
+      ghostBtn: {
+        padding: '5px 10px', borderRadius: '8px', fontSize: '12.5px', cursor: 'pointer',
+        fontFamily: 'inherit', color: 'var(--dsw-alias-label-secondary)',
+        background: 'transparent', border: '1px solid var(--dsw-alias-border-l1)'
       },
       toast: function (ok) {
         return {
-          position: 'absolute', right: '18px', bottom: '16px', maxWidth: '72%',
+          position: 'absolute', right: '18px', bottom: '14px', maxWidth: '72%', zIndex: 6,
           display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 12px',
-          fontSize: '12px', borderRadius: '9px',
-          color: 'var(--dsw-alias-label-primary)',
+          fontSize: '12px', borderRadius: '9px', color: 'var(--dsw-alias-label-primary)',
           background: 'var(--dsw-alias-bg-overlay)',
           border: '1px solid ' + (ok ? 'var(--dsw-alias-border-l1)' : 'var(--dsw-alias-state-error-primary)'),
           boxShadow: '0 8px 24px rgba(16,24,40,0.14)'
@@ -355,6 +585,7 @@ window.__ModuleLoader__.load({
       };
     }
 
+    // ------------------------------------------------------------------ panel
     function Panel(props) {
       const t = props.t;
       const sessionId = props.sessionId;
@@ -365,30 +596,50 @@ window.__ModuleLoader__.load({
       const [rows, setRows] = useState(null);
       const [failure, setFailure] = useState(null);
       const [query, setQuery] = useState('');
+      const [group, setGroup] = useState('all');
+      const [sort, setSort] = useState('usage');
+      const [page, setPage] = useState(1);
       const [selected, setSelected] = useState('');
+      const [expanded, setExpanded] = useState('');
       const [hover, setHover] = useState('');
       const [toast, setToast] = useState(null);
       const [attempt, setAttempt] = useState(0);
+      const [editing, setEditing] = useState(null);
+      const [confirmReset, setConfirmReset] = useState(false);
+      const [cache, setCache] = useState({});
+      const [usage, setUsage] = useState({});
+      const [narrow, setNarrow] = useState(false);
+      const [cardMax, setCardMax] = useState(0);
+
       const inputRef = useRef(null);
-      const rootRef = useRef(null);
       const cardRef = useRef(null);
+      const rootRef = useRef(null);
       const toastTimer = useRef(0);
       const lastInsert = useRef(null);
-      const [cardMax, setCardMax] = useState(0);
-      const [narrow, setNarrow] = useState(false);
 
-      // The conversation view does not guarantee a flex-bounded height, so measure
-      // the room the view actually has and cap the list to it.
+      // Restore the persisted Chinese overrides, usage counters and view state.
+      useEffect(function () {
+        const storedCache = loadStore(STORE.cache, {});
+        const storedUsage = loadStore(STORE.usage, {});
+        const storedUi = loadStore(STORE.ui, {});
+        setCache(storedCache.entries || {});
+        setUsage(storedUsage.entries || {});
+        if (GROUPS.indexOf(storedUi.group) >= 0) setGroup(storedUi.group);
+        if (SORTS.indexOf(storedUi.sort) >= 0) setSort(storedUi.sort);
+        if (typeof storedUi.page === 'number' && storedUi.page >= 1) setPage(storedUi.page);
+      }, []);
+
+      // Measure the room the view really has and the width that decides the layout.
       useEffect(function () {
         const measure = function () {
           const el = cardRef.current;
           if (!el) return;
-          const top = el.getBoundingClientRect().top;
-          if (!top) return;
-          const room = window.innerHeight - top - 176;
-          setCardMax(Math.max(200, Math.min(room, Math.round(window.innerHeight * 0.72))));
-          const width = el.getBoundingClientRect().width;
-          if (width) setNarrow(width < 560);
+          const rect = el.getBoundingClientRect();
+          if (rect.top) {
+            const room = window.innerHeight - rect.top - 176;
+            setCardMax(Math.max(240, Math.min(room, Math.round(window.innerHeight * 0.78))));
+          }
+          if (rect.width) setNarrow(rect.width < 640);
         };
         measure();
         const later = setTimeout(measure, 350);
@@ -406,7 +657,7 @@ window.__ModuleLoader__.load({
         };
       }, []);
 
-      useEffect(() => {
+      useEffect(function () {
         let alive = true;
         let timer = 0;
         setRows(null);
@@ -425,7 +676,6 @@ window.__ModuleLoader__.load({
               const row = normalize(entries[i]);
               if (row) next.push(row);
             }
-            next.sort(function (a, b) { return a.name.localeCompare(b.name); });
             setRows(next);
           } catch (error) {
             if (!alive) return;
@@ -441,55 +691,264 @@ window.__ModuleLoader__.load({
         return function () { if (toastTimer.current) clearTimeout(toastTimer.current); };
       }, []);
 
-      const filtered = useMemo(function () {
-        if (!rows) return [];
-        const q = query.trim().toLowerCase();
-        if (!q) return rows;
-        return rows.filter(function (row) {
-          return (row.zhName && row.zhName.toLowerCase().indexOf(q) >= 0)
-            || (row.zhDesc && row.zhDesc.toLowerCase().indexOf(q) >= 0)
-            || row.name.toLowerCase().indexOf(q) >= 0
-            || (row.description && row.description.toLowerCase().indexOf(q) >= 0);
-        });
-      }, [rows, query]);
-
       const flash = function (message, ok) {
         setToast({ message: message, ok: ok });
         if (toastTimer.current) clearTimeout(toastTimer.current);
         toastTimer.current = setTimeout(function () { setToast(null); }, 2400);
       };
 
+      const persistCache = function (next) {
+        setCache(next);
+        saveStore(STORE.cache, { version: 1, entries: next });
+      };
+      const persistUsage = function (next) {
+        setUsage(next);
+        saveStore(STORE.usage, { version: 1, entries: next });
+      };
+      const persistUi = function (patch) {
+        saveStore(STORE.ui, {
+          version: 1,
+          group: patch.group !== undefined ? patch.group : group,
+          sort: patch.sort !== undefined ? patch.sort : sort,
+          page: patch.page !== undefined ? patch.page : page
+        });
+      };
+
+      // Merge the bundled dictionary with the user's manual overrides and usage.
+      const decorated = useMemo(function () {
+        if (!rows) return [];
+        return rows.map(function (row) {
+          const manual = cache[row.name] || null;
+          return Object.assign({}, row, {
+            zhName: (manual && manual.zhName) || row.dictName || '',
+            zhDesc: (manual && manual.zhDesc) || row.dictDesc || '',
+            manual: !!manual,
+            count: usage[row.name] ? usage[row.name].count || 0 : 0,
+            lastAt: usage[row.name] ? usage[row.name].lastAt || 0 : 0
+          });
+        });
+      }, [rows, cache, usage]);
+
+      const counts = useMemo(function () {
+        const total = { all: decorated.length, npm: 0, github: 0, market: 0, other: 0 };
+        for (let i = 0; i < decorated.length; i++) total[decorated[i].source] += 1;
+        return total;
+      }, [decorated]);
+
+      const filtered = useMemo(function () {
+        const q = query.trim().toLowerCase();
+        return decorated.filter(function (row) {
+          if (group !== 'all' && row.source !== group) return false;
+          if (!q) return true;
+          return (row.zhName && row.zhName.toLowerCase().indexOf(q) >= 0)
+            || (row.zhDesc && row.zhDesc.toLowerCase().indexOf(q) >= 0)
+            || row.name.toLowerCase().indexOf(q) >= 0
+            || (row.description && row.description.toLowerCase().indexOf(q) >= 0);
+        });
+      }, [decorated, group, query]);
+
+      const sorted = useMemo(function () {
+        const list = filtered.slice();
+        if (sort === 'name') {
+          list.sort(function (a, b) { return a.name.localeCompare(b.name); });
+        } else if (sort === 'source') {
+          list.sort(function (a, b) {
+            const bySource = SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source];
+            return bySource !== 0 ? bySource : a.name.localeCompare(b.name);
+          });
+        } else {
+          list.sort(function (a, b) {
+            if (b.count !== a.count) return b.count - a.count;
+            if (b.lastAt !== a.lastAt) return b.lastAt - a.lastAt;
+            return a.name.localeCompare(b.name);
+          });
+        }
+        return list;
+      }, [filtered, sort]);
+
+      const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+      const currentPage = Math.min(Math.max(1, page), pageCount);
+      const paged = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+      const selectedRow = decorated.find(function (row) { return row.name === selected; }) || null;
+
+      useEffect(function () {
+        if (page !== currentPage) setPage(currentPage);
+      }, [page, currentPage]);
+
+      const goPage = function (next) {
+        const value = Math.min(Math.max(1, next), pageCount);
+        setPage(value);
+        persistUi({ page: value });
+      };
+
+      const changeGroup = function (value) {
+        setGroup(value);
+        setPage(1);
+        persistUi({ group: value, page: 1 });
+      };
+
+      const changeSort = function (value) {
+        setSort(value);
+        setPage(1);
+        persistUi({ sort: value, page: 1 });
+      };
+
+      const changeQuery = function (value) {
+        setQuery(value);
+        setPage(1);
+      };
+
+      const recordUsage = function (name) {
+        const previous = usage[name] || { count: 0, lastAt: 0 };
+        const next = Object.assign({}, usage);
+        next[name] = { count: (previous.count || 0) + 1, lastAt: Date.now() };
+        persistUsage(next);
+      };
+
       const doInsert = function (row) {
         if (!row) return;
-        // The same row must not insert twice from one gesture (wheel + Enter, double
-        // click + bubbling keydown, and so on).
         const now = Date.now();
-        if (lastInsert.current && lastInsert.current.name === row.name && now - lastInsert.current.at < 600) return;
-        lastInsert.current = { name: row.name, at: now };
-        const how = insertCommand(inputActions, row.name);
+        // Nothing changed in the draft since the last insert of the same row: skip,
+        // so a double gesture never writes the same command twice.
+        const last = lastInsert.current;
+        if (last && last.name === row.name && now - last.at < 600) return;
+        if (last && last.name === row.name && inputActions
+          && typeof inputActions.captureInsertion === 'function') {
+          try {
+            const span = inputActions.captureInsertion();
+            if (span && last.rev !== undefined && span.draftRev === last.rev) return;
+          } catch (error) { /* fall through to a normal insert */ }
+        }
+        const result = insertCommand(inputActions, row.name);
         const cmd = '/' + row.name;
-        if (how === 'composer') flash(t('inserted', { cmd: cmd }), true);
-        else if (how === 'clipboard') flash(t('insertedClipboard', { cmd: cmd }), true);
-        else flash(t('insertFailed'), false);
+        if (result.how === 'composer') {
+          lastInsert.current = { name: row.name, at: now, rev: result.rev };
+          recordUsage(row.name);
+          flash(t('inserted', { cmd: cmd }), true);
+        } else if (result.how === 'clipboard') {
+          lastInsert.current = { name: row.name, at: now };
+          recordUsage(row.name);
+          flash(t('insertedClipboard', { cmd: cmd }), true);
+        } else {
+          flash(t('insertFailed'), false);
+        }
+      };
+
+      const saveEdit = function () {
+        if (!editing) return;
+        const next = Object.assign({}, cache);
+        const zhName = (editing.zhName || '').trim();
+        const zhDesc = (editing.zhDesc || '').trim();
+        if (!zhName && !zhDesc) delete next[editing.name];
+        else {
+          next[editing.name] = {
+            zhName: zhName, zhDesc: zhDesc, origin: 'manual', updatedAt: Date.now()
+          };
+        }
+        persistCache(next);
+        setEditing(null);
+        flash(t('saved'), true);
+      };
+
+      const restoreEdit = function () {
+        if (!editing) return;
+        const next = Object.assign({}, cache);
+        delete next[editing.name];
+        persistCache(next);
+        setEditing(null);
+        flash(t('restored'), true);
+      };
+
+      const clearUsage = function () {
+        persistUsage({});
+        setConfirmReset(false);
+        flash(t('resetDone'), true);
       };
 
       const onKeyDown = function (event) {
-        if (!filtered.length) return;
-        const index = filtered.findIndex(function (row) { return row.name === selected; });
+        if (!paged.length) return;
+        const index = paged.findIndex(function (row) { return row.name === selected; });
         if (event.key === 'ArrowDown') {
           event.preventDefault();
-          setSelected(filtered[Math.min(index + 1, filtered.length - 1)].name);
+          setSelected(paged[Math.min(index + 1, paged.length - 1)].name);
         } else if (event.key === 'ArrowUp') {
           event.preventDefault();
-          setSelected(filtered[Math.max(index - 1, 0)].name);
+          setSelected(paged[Math.max(index - 1, 0)].name);
         } else if (event.key === 'Enter') {
           event.preventDefault();
-          doInsert(filtered[index >= 0 ? index : 0]);
+          // Nothing selected yet: select the first row instead of writing a command
+          // the user never chose (empty-selection guard).
+          if (index < 0) setSelected(paged[0].name);
+          else doInsert(paged[index]);
         } else if (event.key === 'Escape') {
           event.preventDefault();
-          setQuery('');
+          changeQuery('');
         }
       };
+
+      // ------------------------------------------------------------- render
+      const groupLabel = function (key) {
+        if (key === 'npm') return t('groupNpm');
+        if (key === 'github') return t('groupGithub');
+        if (key === 'market') return t('groupMarket');
+        return t('groupAll');
+      };
+
+      const groupList = narrow ? null : h('div', { style: S.groups },
+        h('div', { style: S.groupTitle }, t('filterSource')),
+        GROUPS.map(function (key) {
+          return h('button', {
+            key: key,
+            type: 'button',
+            style: S.groupItem(group === key),
+            onClick: function () { changeGroup(key); }
+          },
+            h('span', { style: S.groupLabel }, groupLabel(key)),
+            h('span', { style: S.groupCount }, counts[key] || 0)
+          );
+        })
+      );
+
+      const toolbar = h('div', { style: S.toolbar },
+        h('div', { style: S.searchWrap },
+          h('svg', {
+            width: 13, height: 13, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor',
+            strokeWidth: 1.6, strokeLinecap: 'round', 'aria-hidden': true,
+            style: { flex: '0 0 auto', color: 'var(--dsw-alias-label-secondary)' }
+          }, h('circle', { cx: 7, cy: 7, r: 4.3 }), h('path', { d: 'M10.4 10.4L14 14' })),
+          h('input', {
+            ref: inputRef, style: S.input, value: query, spellCheck: false,
+            placeholder: t('search'), 'aria-label': t('search'), title: t('hint'),
+            onChange: function (event) { changeQuery(event.target.value); }
+          })
+        ),
+        narrow
+          ? h('select', {
+              style: S.select, value: group, 'aria-label': t('filterSource'),
+              onChange: function (event) { changeGroup(event.target.value); }
+            }, GROUPS.map(function (key) {
+              return h('option', { key: key, value: key }, groupLabel(key) + ' (' + (counts[key] || 0) + ')');
+            }))
+          : null,
+        h('select', {
+          style: S.select, value: sort, 'aria-label': t('sortLabel'),
+          onChange: function (event) { changeSort(event.target.value); }
+        },
+          h('option', { value: 'usage' }, t('sortUsage')),
+          h('option', { value: 'name' }, t('sortName')),
+          h('option', { value: 'source' }, t('sortSource'))
+        ),
+        h('button', {
+          type: 'button', style: S.iconBtn, title: t('refresh'),
+          onClick: function () { setAttempt(attempt + 1); }
+        },
+          h('svg', {
+            width: 12, height: 12, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor',
+            strokeWidth: 1.6, strokeLinecap: 'round'
+          }, h('path', { d: 'M13 8a5 5 0 1 1-1.6-3.7' }), h('path', { d: 'M13 2.5V5h-2.5' })),
+          t('refresh')
+        )
+      );
 
       let body;
       if (failure) {
@@ -503,109 +962,240 @@ window.__ModuleLoader__.load({
         );
       } else if (rows === null) {
         body = h('div', { style: S.state }, h('div', { style: S.stateBody }, t('loading')));
-      } else if (!rows.length) {
+      } else if (!decorated.length) {
         body = h('div', { style: S.state },
           h('div', { style: S.stateTitle }, t('emptyNone')),
           h('div', { style: S.stateBody }, t('emptyNoneBody'))
         );
-      } else if (!filtered.length) {
+      } else if (!sorted.length) {
         body = h('div', { style: S.state },
           h('div', { style: S.stateTitle }, t('emptySearch')),
           h('div', { style: S.stateBody }, t('emptySearchBody')),
           h('button', {
             type: 'button', style: S.button,
-            onClick: function () { setQuery(''); }
+            onClick: function () { changeQuery(''); changeGroup('all'); }
           }, t('clear'))
         );
       } else {
+        const items = [];
+        paged.forEach(function (row) {
+          const isSelected = row.name === selected;
+          const isHover = row.name === hover;
+          const isOpen = row.name === expanded;
+          const cells = [];
+          cells.push(isSelected ? h('span', { key: 'a', style: S.accent }) : null);
+
+          if (narrow) {
+            cells.push(h('div', { key: 'n', style: { minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' } },
+              h('div', { style: S.zhName },
+                row.zhName || row.name,
+                row.zhName ? null : h('span', { style: S.badge }, t('untranslated'))
+              ),
+              h('div', { style: S.enName }, row.name),
+              h('div', { style: S.desc }, row.zhDesc || row.description || t('noDesc'))
+            ));
+          } else {
+            cells.push(h('div', { key: 'n', style: S.nameCell },
+              h('button', {
+                type: 'button', style: S.chevron, title: isOpen ? t('less') : t('more'),
+                'aria-expanded': isOpen, 'aria-label': isOpen ? t('less') : t('more'),
+                onClick: function (event) { event.stopPropagation(); setExpanded(isOpen ? '' : row.name); }
+              }, h('svg', {
+                width: 8, height: 8, viewBox: '0 0 8 8', fill: 'none',
+                stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round'
+              }, h('path', { d: isOpen ? 'M1 3l3 3 3-3' : 'M3 1l3 3-3 3' }))),
+              h('span', { style: S.zhName }, row.zhName || row.name),
+              row.zhName ? null : h('span', { style: S.badge }, t('untranslated'))
+            ));
+            cells.push(h('div', { key: 'e', style: S.enName }, row.name));
+            cells.push(h('div', { key: 'd', style: S.desc }, row.zhDesc || row.description || t('noDesc')));
+            cells.push(h('div', {
+              key: 'u', style: S.usage,
+              title: row.lastAt ? t('lastAt', { time: relTime(row.lastAt) }) : t('neverUsed')
+            }, row.count ? t('usedN', { n: row.count }) : t('neverUsed')));
+          }
+
+          const actions = (isHover || isSelected)
+            ? h('div', { key: 'x', style: S.actions },
+                h('button', {
+                  type: 'button', style: S.actBtn, title: '/' + row.name,
+                  onClick: function (event) { event.stopPropagation(); setSelected(row.name); doInsert(row); }
+                }, t('insert')),
+                h('button', {
+                  type: 'button', style: S.actIcon, title: t('edit'),
+                  onClick: function (event) {
+                    event.stopPropagation();
+                    setEditing({ name: row.name, zhName: row.zhName, zhDesc: row.zhDesc, manual: row.manual });
+                  }
+                }, '✎')
+              )
+            : h('span', { key: 't', style: S.tag(row.source === 'market') }, SOURCE_LABEL[row.source] || t('other'));
+
+          if (narrow) cells.push(actions);
+          else cells.push(actions);
+
+          items.push(h('div', {
+            key: row.name,
+            role: 'option',
+            'aria-selected': isSelected,
+            style: S.row(isSelected, isHover, narrow),
+            onMouseEnter: function () { setHover(row.name); },
+            onMouseLeave: function () { setHover(''); },
+            onClick: function () {
+              setSelected(row.name);
+              if (inputRef.current) inputRef.current.focus();
+            },
+            onDoubleClick: function () { setSelected(row.name); doInsert(row); },
+            title: row.description || row.name
+          }, cells));
+
+          if (isOpen) {
+            items.push(h('div', { key: row.name + ':x', style: S.expanded },
+              h('div', { style: S.kv },
+                h('span', { style: S.kvKey }, t('colEn')),
+                h('span', { style: S.monoVal }, row.name)
+              ),
+              h('div', { style: S.kv },
+                h('span', { style: S.kvKey }, t('colDesc')),
+                h('span', { style: S.kvVal }, row.description || t('noDesc'))
+              ),
+              row.whenToUse ? h('div', { style: S.kv },
+                h('span', { style: S.kvKey }, t('whenToUse')),
+                h('span', { style: S.kvVal }, row.whenToUse)
+              ) : null,
+              row.path ? h('div', { style: S.kv },
+                h('span', { style: S.kvKey }, t('pathLabel')),
+                h('span', { style: S.monoVal }, row.path)
+              ) : null,
+              h('div', { style: { display: 'flex', gap: '8px', marginTop: '2px' } },
+                h('button', {
+                  type: 'button', style: S.ghostBtn,
+                  onClick: function (event) {
+                    event.stopPropagation();
+                    setEditing({ name: row.name, zhName: row.zhName, zhDesc: row.zhDesc, manual: row.manual });
+                  }
+                }, t('edit'))
+              )
+            ));
+          }
+        });
+
         body = h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, overflow: 'hidden' } },
           h('div', { style: S.thead(narrow) },
             h('div', null, t('colName')),
             narrow ? h('div', null, t('colSource')) : h('div', null, t('colEn')),
             narrow ? null : h('div', null, t('colDesc')),
+            narrow ? null : h('div', null, t('colUsage')),
             narrow ? null : h('div', null, t('colSource'))
           ),
-          h('div', { style: S.list, role: 'listbox', 'aria-label': t('title') },
-            filtered.map(function (row) {
-              const isSelected = row.name === selected;
-              const isHover = row.name === hover;
-              const action = (isHover || isSelected)
-                ? h('button', {
-                    type: 'button', style: S.insertBtn,
-                    onClick: function (event) { event.stopPropagation(); setSelected(row.name); doInsert(row); },
-                    title: '/' + row.name
-                  }, t('insert'))
-                : h('span', { style: S.tag(row.source === 'market') }, SOURCES[row.source] || SOURCES.other);
-              return h('div', {
-                key: row.name,
-                role: 'option',
-                'aria-selected': isSelected,
-                style: S.row(isSelected, isHover, narrow),
-                onMouseEnter: function () { setHover(row.name); },
-                onMouseLeave: function () { setHover(''); },
-                onClick: function () {
-                  setSelected(row.name);
-                  if (inputRef.current) inputRef.current.focus();
-                },
-                onDoubleClick: function () { setSelected(row.name); doInsert(row); },
-                title: row.description || row.name
-              },
-                isSelected ? h('span', { style: S.accent }) : null,
-                narrow
-                  ? h('div', { style: { minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' } },
-                      h('div', { style: S.zhName },
-                        row.zhName || row.name,
-                        row.zhName ? null : h('span', { style: S.badge }, t('untranslated'))
-                      ),
-                      h('div', { style: S.enName }, row.name),
-                      h('div', { style: S.desc }, row.zhDesc || row.description || '—')
-                    )
-                  : h('div', { style: S.zhName },
-                      row.zhName || row.name,
-                      row.zhName ? null : h('span', { style: S.badge }, t('untranslated'))
-                    ),
-                narrow ? action : h('div', { style: S.enName }, row.name),
-                narrow ? null : h('div', { style: S.desc }, row.zhDesc || row.description || '—'),
-                narrow ? null : action
-              );
-            })
-          )
+          h('div', { style: S.list, role: 'listbox', 'aria-label': t('title') }, items)
         );
       }
 
+      const footer = h('div', { style: S.footer },
+        selectedRow
+          ? h('span', null,
+              t('selected', {
+                name: selectedRow.zhName || selectedRow.name,
+                id: selectedRow.name
+              }),
+              ' ',
+              h('button', {
+                type: 'button', style: S.linkBtn,
+                onClick: function () { setSelected(''); }
+              }, t('clearSelection'))
+            )
+          : h('span', null, t('readonly')),
+        sorted.length
+          ? h('span', { style: { marginLeft: '8px' } },
+              h('button', {
+                type: 'button', style: S.linkBtn,
+                onClick: function () { setConfirmReset(true); }
+              }, t('resetUsage'))
+            )
+          : null,
+        h('div', { style: S.pager },
+          sorted.length ? h('span', { style: { marginRight: '8px' } },
+            t('pagerInfo', { n: sorted.length, page: currentPage, pages: pageCount })) : null,
+          pageCount > 1 ? h('button', {
+            type: 'button', style: S.pageBtn(false), disabled: currentPage <= 1,
+            onClick: function () { goPage(currentPage - 1); }
+          }, '‹') : null,
+          pageCount > 1 ? (function () {
+            const buttons = [];
+            const windowStart = Math.max(1, Math.min(currentPage - 2, pageCount - 4));
+            const windowEnd = Math.min(pageCount, windowStart + 4);
+            for (let p = windowStart; p <= windowEnd; p += 1) {
+              buttons.push(h('button', {
+                key: p, type: 'button', style: S.pageBtn(p === currentPage),
+                onClick: (function (target) { return function () { goPage(target); }; })(p)
+              }, p));
+            }
+            return buttons;
+          })() : null,
+          pageCount > 1 ? h('button', {
+            type: 'button', style: S.pageBtn(false), disabled: currentPage >= pageCount,
+            onClick: function () { goPage(currentPage + 1); }
+          }, '›') : null
+        )
+      );
+
+      const editModal = editing ? h('div', { style: S.scrim, onClick: function () { setEditing(null); } },
+        h('div', { style: S.modal, onClick: function (event) { event.stopPropagation(); } },
+          h('div', { style: S.modalTitle }, t('editTitle', { name: editing.name })),
+          h('div', { style: S.field },
+            h('span', { style: S.fieldLabel }, t('editName')),
+            h('input', {
+              style: S.fieldInput, value: editing.zhName || '',
+              placeholder: t('editPlaceholderName'),
+              onChange: function (event) { setEditing(Object.assign({}, editing, { zhName: event.target.value })); }
+            })
+          ),
+          h('div', { style: S.field },
+            h('span', { style: S.fieldLabel }, t('editDesc')),
+            h('input', {
+              style: S.fieldInput, value: editing.zhDesc || '',
+              placeholder: t('editPlaceholderDesc'),
+              onChange: function (event) { setEditing(Object.assign({}, editing, { zhDesc: event.target.value })); }
+            })
+          ),
+          h('div', { style: S.modalRow },
+            editing.manual ? h('button', { type: 'button', style: S.ghostBtn, onClick: restoreEdit }, t('restore')) : null,
+            h('button', { type: 'button', style: S.ghostBtn, onClick: function () { setEditing(null); } }, t('cancel')),
+            h('button', { type: 'button', style: S.primary, onClick: saveEdit }, t('save'))
+          )
+        )
+      ) : null;
+
+      const resetModal = confirmReset ? h('div', { style: S.scrim, onClick: function () { setConfirmReset(false); } },
+        h('div', { style: S.modal, onClick: function (event) { event.stopPropagation(); } },
+          h('div', { style: S.modalTitle }, t('resetTitle')),
+          h('div', { style: S.modalBody }, t('resetBody')),
+          h('div', { style: S.modalRow },
+            h('button', { type: 'button', style: S.ghostBtn, onClick: function () { setConfirmReset(false); } }, t('cancel')),
+            h('button', { type: 'button', style: S.primary, onClick: clearUsage }, t('resetOk'))
+          )
+        )
+      ) : null;
+
       return h('div', { ref: rootRef, style: S.root, tabIndex: -1, onKeyDown: onKeyDown },
         h('div', { style: S.head },
-          h('div', {
-            'aria-hidden': true,
-            style: {
-              flex: '0 0 auto', width: '26px', height: '26px', marginTop: '1px',
-              borderRadius: '8px', display: 'grid', placeItems: 'center',
-              color: '#fff', fontSize: '13px', fontWeight: 600,
-              background: 'var(--dsw-alias-brand-primary)'
-            }
-          }, '技'),
+          h('div', { 'aria-hidden': true, style: S.avatar }, '技'),
           h('div', { style: S.titles },
             h('h1', { style: S.h1 }, t('title')),
             narrow ? null : h('p', { style: S.sub }, t('subtitle'))
           ),
-          rows && rows.length ? h('div', { style: S.count }, t('total', { n: rows.length })) : null,
+          decorated.length ? h('div', { style: S.countChip }, t('total', { n: decorated.length })) : null,
           narrow ? null : h('div', { style: S.chip }, t('readonly'))
         ),
-        h('div', { style: S.searchWrap },
-          h('svg', {
-            width: 14, height: 14, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor',
-            strokeWidth: 1.6, strokeLinecap: 'round', 'aria-hidden': true,
-            style: { flex: '0 0 auto', color: 'var(--dsw-alias-label-secondary)' }
-          }, h('circle', { cx: 7, cy: 7, r: 4.3 }), h('path', { d: 'M10.4 10.4L14 14' })),
-          h('input', {
-            ref: inputRef, style: S.input, value: query, spellCheck: false,
-            placeholder: t('search'), 'aria-label': t('search'),
-            title: t('hint'),
-            onChange: function (event) { setQuery(event.target.value); }
-          }),
-          h('span', { style: S.slash }, '/')
+        h('div', { ref: cardRef, style: Object.assign({}, S.card, cardMax ? { maxHeight: cardMax + 'px', minHeight: Math.min(cardMax, 320) + 'px' } : { maxHeight: '58vh' }) },
+          groupList,
+          h('div', { style: S.main },
+            toolbar,
+            body,
+            footer
+          )
         ),
-        h('div', { ref: cardRef, style: Object.assign({}, S.card, cardMax ? { maxHeight: cardMax + 'px' } : { maxHeight: '58vh' }) }, body),
         toast
           ? h('div', { style: S.toast(toast.ok) },
               h('span', {
@@ -613,7 +1203,9 @@ window.__ModuleLoader__.load({
               }, toast.ok ? '✓' : '!'),
               h('span', null, toast.message)
             )
-          : null
+          : null,
+        editModal,
+        resetModal
       );
     }
 

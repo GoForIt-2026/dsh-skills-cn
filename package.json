@@ -1,7 +1,7 @@
 {
   "name": "dsh-skills-cn",
-  "version": "1.0.0",
-  "description": "Browse every installed DSH skill with a Chinese name and Chinese description beside its English id, then insert its /skill-name command into the composer. Read-only, offline, no model quota.",
+  "version": "1.1.0",
+  "description": "Browse every installed DSH skill with a Chinese name and Chinese description beside its English id: group by source, sort by usage, page through the list, edit the Chinese text, then insert its /skill-name command into the composer. Read-only and offline.",
   "type": "module",
   "main": "index.js",
   "exports": {
