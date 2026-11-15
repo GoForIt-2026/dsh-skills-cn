@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-11-15
+
+### Changed
+
+- **Grouping is now based on the Host registry's real `source` field** instead of guessing from the
+  path: 全部技能 / 用户目录 (`user-*`) / DSH 内置 (`bundled`) / 插件提供 (`runtime`, `custom`) /
+  其他. On this machine that is 43 = 34 + 5 + 4 + 0, and the five counts always sum to the total.
+- The **提供方 (providers)** column shows the registry provider of each skill (`agent-skills`,
+  `office`, …) so the eight path-less, runtime-registered skills finally say who provides them.
+- A new **目录 (directory)** column shows where the skill lives, shortened to `~/.agents/skills/<name>`
+  for user roots and `无目录（运行时注册）` when the registry reports no file path.
+- The table is tighter (smaller gaps and paddings) and **every column edge is draggable**; widths are
+  persisted in `localStorage` and a `⟲` button in the last header restores the defaults. Columns that
+  no longer fit scroll horizontally instead of being clipped.
+
+### Fixed
+
+- Sorting by source ranked `user` last because `order[group] || 3` treated the rank `0` as missing.
+
 ## [1.3.1] - 2026-11-15
 
 ### Fixed

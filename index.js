@@ -97,6 +97,52 @@ function readBody(req) {
   })
 }
 
+/** Read the Host skill registry with the fields the session-scoped Remote drops. */
+async function readCatalog(webCtx, sessionId) {
+  const skills = webCtx.get('skills')
+  if (!skills) return { ok: false, reason: 'no-skills-service' }
+  const agents = webCtx.get('agents')
+  let agent
+  try {
+    agent = agents && sessionId ? agents.get(sessionId) : undefined
+  } catch (error) {
+    agent = undefined
+  }
+  const attempts = []
+  if (agent && agent.ctx) attempts.push({ scope: agent.ctx })
+  attempts.push({})
+  let lastError
+  for (const options of attempts) {
+    try {
+      const snapshot = await skills.snapshot(options)
+      const items = (snapshot.skills || []).map(function (skill) {
+        const base = skill.resourceBase
+        return {
+          name: skill.name,
+          description: skill.description,
+          whenToUse: skill.whenToUse,
+          path: skill.path,
+          source: skill.source,
+          provider: skill.provider,
+          modelInvocable: skill.invocation ? skill.invocation.modelInvocable : undefined,
+          userInvocable: skill.invocation ? skill.invocation.userInvocable : undefined,
+          resourceBase: base
+            ? { kind: base.kind, path: base.path, url: base.url, description: base.description }
+            : null
+        }
+      })
+      return { ok: true, items, complete: snapshot.complete !== false, scoped: Boolean(options.scope) }
+    } catch (error) {
+      lastError = error
+    }
+  }
+  return {
+    ok: false,
+    reason: 'catalog-failed',
+    message: String((lastError && lastError.message) || lastError)
+  }
+}
+
 function route(handler, webServer) {
   return async function handle(req, res) {
     try {
@@ -141,6 +187,11 @@ export function apply(ctx) {
       confirmToken: CONFIRM_TOKEN,
       maxNames: MAX_NAMES
     }))
+
+    // Rich catalog: the Host registry keeps `source`, `provider` and `resourceBase`
+    // for every skill, which the session-scoped Remote the panel otherwise uses
+    // does not expose.
+    mount('/catalog', async (body) => readCatalog(webCtx, body && body.sessionId))
 
     mount('/preview', async (body) => preview(body.names, skillRoots()))
     mount('/delete', async (body) => removeSkills(body.names, skillRoots(), {

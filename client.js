@@ -13,7 +13,7 @@ window.__ModuleLoader__.load({
       usage: 'dsh-skills-cn/usage/v1',
       ui: 'dsh-skills-cn/ui/v1'
     };
-    const GROUPS = ['all', 'npm', 'github', 'market', 'other'];
+    const GROUPS = ['all', 'user', 'bundled', 'runtime', 'other'];
     const SORTS = ['usage', 'name', 'source'];
 
     const zh = {
@@ -22,21 +22,27 @@ window.__ModuleLoader__.load({
       subtitle: '本机已安装的技能都在这里。选中一个，把它的斜杠命令写进输入框，不会自动发送。',
       search: '搜索技能：中文名、中文说明、英文标识都能搜',
       groupAll: '全部技能',
-      groupNpm: 'npm 安装',
-      groupGithub: 'GitHub 手动安装',
-      groupMarket: 'DSH 内部市场安装',
-      groupOther: '其他来源',
+      groupUser: '用户目录',
+      groupBundled: 'DSH 内置',
+      groupRuntime: '插件提供',
+      groupOther: '其他',
       sourceAll: '全部来源',
-      filterSource: '按安装方式筛选',
+      filterSource: '按来源分组',
       sortLabel: '排序',
       sortUsage: '常用优先',
       sortName: '名称字母序',
-      sortSource: '按安装方式分组',
+      sortSource: '按来源分组',
       refresh: '刷新',
       colName: '中文名称',
       colEn: '英文标识',
       colDesc: '中文说明',
+      colDir: '目录',
+      colProvider: '提供方',
       colUsage: '使用',
+      noDir: '无目录（运行时注册）',
+      noProvider: '—',
+      resetWidths: '重置列宽',
+      dragHint: '拖动调整列宽',
       colSource: '来源',
       insert: '插入',
       inserted: '已插入 {cmd}',
@@ -145,12 +151,12 @@ window.__ModuleLoader__.load({
       subtitle: 'Every skill installed on this machine. Pick one to write its slash command into the composer; nothing is sent.',
       search: 'Search by Chinese name, English name, or description',
       groupAll: 'All skills',
-      groupNpm: 'npm install',
-      groupGithub: 'GitHub (manual)',
-      groupMarket: 'DSH market',
-      groupOther: 'Other sources',
+      groupUser: 'User folders',
+      groupBundled: 'DSH bundled',
+      groupRuntime: 'Plugin provided',
+      groupOther: 'Other',
       sourceAll: 'All sources',
-      filterSource: 'Filter by source',
+      filterSource: 'Group by source',
       sortLabel: 'Sort',
       sortUsage: 'Most used',
       sortName: 'Name A→Z',
@@ -159,7 +165,13 @@ window.__ModuleLoader__.load({
       colName: 'Chinese name',
       colEn: 'English name',
       colDesc: 'Description',
+      colDir: 'Directory',
+      colProvider: 'Provider',
       colUsage: 'Usage',
+      noDir: 'no directory (runtime)',
+      noProvider: '—',
+      resetWidths: 'Reset widths',
+      dragHint: 'Drag to resize',
       colSource: 'Source',
       insert: 'Insert',
       inserted: 'Inserted {cmd}',
@@ -324,19 +336,67 @@ window.__ModuleLoader__.load({
       return 'other';
     }
 
+    function dirOf(target) {
+      if (!target) return '';
+      const cut = Math.max(String(target).lastIndexOf('\\'), String(target).lastIndexOf('/'));
+      return cut > 0 ? String(target).slice(0, cut) : '';
+    }
+
+    /** Shorten a directory under one of the allowed roots to a `~/…` form. */
+    function prettyDir(dir, roots) {
+      if (!dir) return '';
+      if (!Array.isArray(roots)) return dir;
+      const normalized = String(dir).replace(/\\/g, '/');
+      for (let i = 0; i < roots.length; i++) {
+        const root = String(roots[i].dir || '').replace(/\\/g, '/').replace(/\/+$/, '');
+        if (!root) continue;
+        const lower = normalized.toLowerCase();
+        if (lower !== root.toLowerCase() && lower.indexOf(root.toLowerCase() + '/') !== 0) continue;
+        const markers = [root.indexOf('/.agents/'), root.indexOf('/.dsh/')].filter(function (idx) { return idx >= 0; });
+        if (markers.length > 0) return '~' + normalized.slice(Math.min.apply(null, markers));
+        return normalized;
+      }
+      return dir;
+    }
+
+    /**
+     * Which fact-based group a skill belongs to.
+     * The Host registry reports `source` ('user-agents' / 'bundled' / 'runtime' /
+     * 'project-dsh' / ...); without it we fall back to the path heuristic.
+     */
+    function groupFor(source, path) {
+      if (source === 'bundled') return 'bundled';
+      if (source === 'runtime' || source === 'custom') return 'runtime';
+      if (source && source.indexOf('user-') === 0) return 'user';
+      if (!source || source === 'unknown') {
+        const legacy = sourceOf(path);
+        if (legacy === 'preset') return 'bundled';
+        if (legacy === 'npm' || legacy === 'market') return 'runtime';
+        if (legacy === 'github') return 'user';
+        return 'other';
+      }
+      return 'other';
+    }
+
     function normalize(entry) {
       if (!entry || typeof entry !== 'object') return null;
       const name = typeof entry.name === 'string' ? entry.name.trim() : '';
       if (!name) return null;
       const term = TERMS[name] || TERMS[name.toLowerCase()] || null;
+      const path = typeof entry.path === 'string' ? entry.path : '';
+      const provider = typeof entry.provider === 'string' ? entry.provider : '';
+      const source = typeof entry.source === 'string' ? entry.source : '';
       return {
         name: name,
         description: typeof entry.description === 'string' ? entry.description : '',
         whenToUse: typeof entry.whenToUse === 'string' ? entry.whenToUse : '',
-        path: typeof entry.path === 'string' ? entry.path : '',
+        path: path,
+        dir: dirOf(path),
+        provider: provider,
+        source: source,
+        group: groupFor(source, path),
         dictName: term ? term[0] : '',
-        dictDesc: term ? term[1] : '',
-        source: sourceOf(entry.path)
+        dictDesc: term ? term[1] : ''
       };
     }
 
@@ -446,6 +506,19 @@ window.__ModuleLoader__.load({
     const ROW_COLS = 'minmax(140px,1.1fr) minmax(110px,1fr) minmax(0,1.4fr) 64px 84px';
     const NARROW_COLS = 'minmax(0,1fr) 84px';
 
+    // Column model for the wide table: the widths are user-resizable and persisted.
+    // `flex` columns may absorb leftover width, so the table fits without scrolling.
+    const COLUMNS = [
+      { key: 'name', label: 'colName', min: 96, def: 110, flex: false },
+      { key: 'en', label: 'colEn', min: 84, def: 96, flex: false },
+      { key: 'desc', label: 'colDesc', min: 96, def: 130, flex: true },
+      { key: 'dir', label: 'colDir', min: 90, def: 130, flex: true },
+      { key: 'provider', label: 'colProvider', min: 60, def: 70, flex: false },
+      { key: 'usage', label: 'colUsage', min: 42, def: 46, flex: false }
+    ];
+    const DEFAULT_WIDTHS = COLUMNS.map(function (column) { return column.def; });
+    const WIDTHS_VERSION = 2;
+
     const S = {
       root: {
         position: 'relative', display: 'flex', flexDirection: 'column',
@@ -526,21 +599,21 @@ window.__ModuleLoader__.load({
         color: 'var(--dsw-alias-label-primary)', background: 'transparent',
         border: '1px solid var(--dsw-alias-border-l1)', display: 'flex', alignItems: 'center', gap: '6px'
       },
-      thead: function (narrow) {
+      thead: function (narrow, template) {
         return {
-          display: 'grid', gridTemplateColumns: narrow ? NARROW_COLS : ROW_COLS,
-          gap: '14px', alignItems: 'center', flex: '0 0 auto', height: '30px',
-          padding: '0 14px', fontSize: '11px',
+          display: 'grid', gridTemplateColumns: template || (narrow ? NARROW_COLS : ROW_COLS),
+          gap: '10px', alignItems: 'center', flex: '0 0 auto', height: '30px',
+          padding: '0 10px', fontSize: '11px',
           color: 'var(--dsw-alias-label-secondary)',
           borderBottom: '1px solid var(--dsw-alias-border-l1)'
         };
       },
-      list: { flex: '1 1 auto', minHeight: '0', overflowY: 'auto', overflowX: 'hidden' },
-      row: function (active, hovered, narrow) {
+      list: { flex: '1 1 auto', minHeight: '0', overflowY: 'auto', overflowX: 'visible' },
+      row: function (active, hovered, narrow, template) {
         return {
-          display: 'grid', gridTemplateColumns: narrow ? NARROW_COLS : ROW_COLS,
-          gap: '14px', alignItems: 'center',
-          minHeight: narrow ? '0px' : '52px', padding: narrow ? '8px 14px' : '0 14px',
+          display: 'grid', gridTemplateColumns: template || (narrow ? NARROW_COLS : ROW_COLS),
+          gap: '10px', alignItems: 'center',
+          minHeight: narrow ? '0px' : '52px', padding: narrow ? '8px 14px' : '0 10px',
           position: 'relative', cursor: 'pointer',
           borderBottom: '1px solid var(--dsw-alias-border-l1)',
           background: active ? 'var(--dsw-alias-bg-layer-2)'
@@ -559,20 +632,44 @@ window.__ModuleLoader__.load({
       },
       zhName: {
         fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden',
-        textOverflow: 'ellipsis'
+        textOverflow: 'ellipsis', minWidth: 0
       },
       badge: { fontSize: '10.5px', fontWeight: 400, color: 'var(--dsw-alias-label-secondary)', marginLeft: '4px' },
       enName: {
         fontSize: '11.5px', fontFamily: MONO, whiteSpace: 'nowrap', overflow: 'hidden',
-        textOverflow: 'ellipsis', color: 'var(--dsw-alias-label-secondary)'
+        textOverflow: 'ellipsis', color: 'var(--dsw-alias-label-secondary)', minWidth: 0
       },
       desc: {
         fontSize: '12.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        color: 'var(--dsw-alias-label-secondary)'
+        color: 'var(--dsw-alias-label-secondary)', minWidth: 0
       },
       usage: {
         fontSize: '11.5px', color: 'var(--dsw-alias-label-secondary)', whiteSpace: 'nowrap',
         fontVariantNumeric: 'tabular-nums'
+      },
+      dirCell: {
+        fontSize: '10.5px', fontFamily: MONO, color: 'var(--dsw-alias-label-secondary)',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0
+      },
+      providerCell: {
+        fontSize: '11px', color: 'var(--dsw-alias-label-secondary)',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0
+      },
+      headerCell: {
+        position: 'relative', display: 'flex', alignItems: 'center', gap: '4px',
+        minWidth: 0, height: '100%', userSelect: 'none'
+      },
+      headerReset: {
+        padding: 0, border: 0, background: 'transparent', cursor: 'pointer',
+        color: 'var(--dsw-alias-brand-primary)', fontSize: '10.5px', fontFamily: 'inherit'
+      },
+      resizeHandle: function (active) {
+        return {
+          position: 'absolute', right: '-6px', top: 0, bottom: 0, width: '10px',
+          cursor: 'col-resize', zIndex: 2,
+          background: active ? 'var(--dsw-alias-brand-primary)' : 'transparent',
+          opacity: active ? 0.35 : 1
+        };
       },
       tag: function (market) {
         return {
@@ -817,6 +914,9 @@ window.__ModuleLoader__.load({
       const [trashOpen, setTrashOpen] = useState(false);
       const [trashBusy, setTrashBusy] = useState(false);
       const [trashConfirmAll, setTrashConfirmAll] = useState(false);
+      const [widths, setWidths] = useState(DEFAULT_WIDTHS);
+      const widthsRef = useRef(DEFAULT_WIDTHS);
+      const [resizing, setResizing] = useState(false);
 
       const inputRef = useRef(null);
       const cardRef = useRef(null);
@@ -834,6 +934,17 @@ window.__ModuleLoader__.load({
         if (GROUPS.indexOf(storedUi.group) >= 0) setGroup(storedUi.group);
         if (SORTS.indexOf(storedUi.sort) >= 0) setSort(storedUi.sort);
         if (typeof storedUi.page === 'number' && storedUi.page >= 1) setPage(storedUi.page);
+        if (Array.isArray(storedUi.widths) && storedUi.widths.length === COLUMNS.length
+          && storedUi.widthsVersion === WIDTHS_VERSION) {
+          const next = storedUi.widths.map(function (width, index) {
+            const value = Number(width);
+            return Number.isFinite(value)
+              ? Math.max(COLUMNS[index].min, Math.round(value))
+              : COLUMNS[index].def;
+          });
+          setWidths(next);
+          widthsRef.current = next;
+        }
       }, []);
 
       // Measure the room the view really has and the width that decides the layout.
@@ -883,6 +994,26 @@ window.__ModuleLoader__.load({
               const row = normalize(entries[i]);
               if (row) next.push(row);
             }
+            // Enrich with the Host registry's source/provider/resourceBase, which
+            // the session-scoped Remote does not expose.
+            try {
+              const rich = await hostCall('/catalog', { sessionId: sessionId });
+              if (rich && rich.ok && Array.isArray(rich.items)) {
+                const byName = {};
+                for (let i = 0; i < rich.items.length; i++) byName[rich.items[i].name] = rich.items[i];
+                for (let i = 0; i < next.length; i++) {
+                  const meta = byName[next[i].name];
+                  if (!meta) continue;
+                  if (typeof meta.provider === 'string' && meta.provider) next[i].provider = meta.provider;
+                  if (typeof meta.source === 'string' && meta.source) next[i].source = meta.source;
+                  const base = meta.resourceBase;
+                  if (base && base.kind === 'directory' && base.path) next[i].dir = base.path;
+                  else if (typeof meta.path === 'string' && meta.path) next[i].dir = dirOf(meta.path);
+                  next[i].group = groupFor(next[i].source, meta.path || next[i].path);
+                }
+              }
+            } catch (error) { /* the rich catalog is optional */ }
+            if (!alive) return;
             setRows(next);
           } catch (error) {
             if (!alive) return;
@@ -1109,8 +1240,39 @@ window.__ModuleLoader__.load({
           version: 1,
           group: patch.group !== undefined ? patch.group : group,
           sort: patch.sort !== undefined ? patch.sort : sort,
-          page: patch.page !== undefined ? patch.page : page
+          page: patch.page !== undefined ? patch.page : page,
+          widths: patch.widths !== undefined ? patch.widths : widthsRef.current,
+          widthsVersion: WIDTHS_VERSION
         });
+      };
+
+      /** Drag one column's right edge; widths are clamped to the column minimum. */
+      const startResize = function (index, event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const startX = event.clientX;
+        const startWidth = widthsRef.current[index];
+        setResizing(true);
+        const onMove = function (moveEvent) {
+          const next = widthsRef.current.slice();
+          next[index] = Math.max(COLUMNS[index].min, Math.round(startWidth + (moveEvent.clientX - startX)));
+          widthsRef.current = next;
+          setWidths(next);
+        };
+        const onUp = function () {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp);
+          setResizing(false);
+          persistUi({ widths: widthsRef.current });
+        };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+      };
+
+      const resetWidths = function () {
+        widthsRef.current = DEFAULT_WIDTHS;
+        setWidths(DEFAULT_WIDTHS);
+        persistUi({ widths: DEFAULT_WIDTHS });
       };
 
       // Merge the bundled dictionary with the user's manual overrides and usage.
@@ -1129,11 +1291,10 @@ window.__ModuleLoader__.load({
       }, [rows, cache, usage]);
 
       const counts = useMemo(function () {
-        const total = { all: decorated.length, npm: 0, github: 0, market: 0, other: 0 };
+        const total = { all: decorated.length, user: 0, bundled: 0, runtime: 0, other: 0 };
         for (let i = 0; i < decorated.length; i++) {
-          const source = decorated[i].source;
-          if (source === 'preset' || source === 'other') total.other += 1;
-          else total[source] += 1;
+          const group = decorated[i].group || 'other';
+          total[group] = (total[group] || 0) + 1;
         }
         return total;
       }, [decorated]);
@@ -1141,11 +1302,7 @@ window.__ModuleLoader__.load({
       const filtered = useMemo(function () {
         const q = query.trim().toLowerCase();
         return decorated.filter(function (row) {
-          if (group === 'other') {
-            if (row.source !== 'other' && row.source !== 'preset') return false;
-          } else if (group !== 'all' && row.source !== group) {
-            return false;
-          }
+          if (group !== 'all' && (row.group || 'other') !== group) return false;
           if (!q) return true;
           return (row.zhName && row.zhName.toLowerCase().indexOf(q) >= 0)
             || (row.zhDesc && row.zhDesc.toLowerCase().indexOf(q) >= 0)
@@ -1159,9 +1316,13 @@ window.__ModuleLoader__.load({
         if (sort === 'name') {
           list.sort(function (a, b) { return a.name.localeCompare(b.name); });
         } else if (sort === 'source') {
+          const order = { user: 0, bundled: 1, runtime: 2, other: 3 };
+          const rank = function (row) {
+            return order[row.group] === undefined ? 3 : order[row.group];
+          };
           list.sort(function (a, b) {
-            const bySource = SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source];
-            return bySource !== 0 ? bySource : a.name.localeCompare(b.name);
+            const byGroup = rank(a) - rank(b);
+            return byGroup !== 0 ? byGroup : a.name.localeCompare(b.name);
           });
         } else {
           list.sort(function (a, b) {
@@ -1295,9 +1456,9 @@ window.__ModuleLoader__.load({
 
       // ------------------------------------------------------------- render
       const groupLabel = function (key) {
-        if (key === 'npm') return t('groupNpm');
-        if (key === 'github') return t('groupGithub');
-        if (key === 'market') return t('groupMarket');
+        if (key === 'user') return t('groupUser');
+        if (key === 'bundled') return t('groupBundled');
+        if (key === 'runtime') return t('groupRuntime');
         if (key === 'other') return t('groupOther');
         return t('groupAll');
       };
@@ -1412,6 +1573,13 @@ window.__ModuleLoader__.load({
           }, t('clear'))
         );
       } else {
+        const gridTemplate = narrow
+          ? NARROW_COLS
+          : widths.map(function (width, index) {
+              return COLUMNS[index].flex ? 'minmax(' + width + 'px,1fr)' : width + 'px';
+            }).join(' ');
+        const totalWidth = widths.reduce(function (sum, width) { return sum + width; }, 0)
+          + 10 * (widths.length - 1) + 20;
         const items = [];
         paged.forEach(function (row) {
           const isSelected = row.name === selected;
@@ -1458,19 +1626,12 @@ window.__ModuleLoader__.load({
             cells.push(h('div', { key: 'e', style: S.enName }, row.name));
             cells.push(h('div', { key: 'd', style: S.desc }, row.zhDesc || row.description || t('noDesc')));
             cells.push(h('div', {
-              key: 'u', style: S.usage,
-              title: row.lastAt ? t('lastAt', { time: relTime(row.lastAt) }) : t('neverUsed')
-            }, row.count ? t('usedN', { n: row.count }) : t('neverUsed')));
-          }
-
-          const actions = batch
-            ? h('span', {
-                key: 'x',
-                style: S.tag(row.source === 'market'),
-                title: deletable ? undefined : t('notDeletable')
-              }, SOURCE_LABEL[row.source] || t('other'))
-            : (isHover || isSelected)
-              ? h('div', { key: 'x', style: S.actions },
+              key: 'dir',
+              style: S.dirCell,
+              title: row.dir || t('noDir')
+            }, row.dir ? prettyDir(row.dir, roots) : t('noDir')));
+            cells.push((isHover || isSelected) && !batch
+              ? h('div', { key: 'p', style: S.actions },
                   h('button', {
                     type: 'button', style: S.actBtn, title: '/' + row.name,
                     onClick: function (event) { event.stopPropagation(); setSelected(row.name); doInsert(row); }
@@ -1483,15 +1644,46 @@ window.__ModuleLoader__.load({
                     }
                   }, '✎')
                 )
-              : h('span', { key: 't', style: S.tag(row.source === 'market') }, SOURCE_LABEL[row.source] || t('other'));
+              : h('span', {
+                  key: 'p',
+                  style: S.providerCell,
+                  title: [row.provider, row.source].filter(Boolean).join(' · ')
+                }, row.provider || row.source || t('noProvider')));
+            cells.push(h('div', {
+              key: 'u', style: S.usage,
+              title: row.lastAt ? t('lastAt', { time: relTime(row.lastAt) }) : t('neverUsed')
+            }, row.count ? t('usedN', { n: row.count }) : t('neverUsed')));
+          }
 
-          cells.push(actions);
+          if (narrow) {
+            cells.push(batch
+              ? h('span', {
+                  key: 'x',
+                  style: S.tag(deletable === false),
+                  title: deletable ? undefined : t('notDeletable')
+                }, t('batch'))
+              : (isHover || isSelected)
+                ? h('div', { key: 'x', style: S.actions },
+                    h('button', {
+                      type: 'button', style: S.actBtn, title: '/' + row.name,
+                      onClick: function (event) { event.stopPropagation(); setSelected(row.name); doInsert(row); }
+                    }, t('insert')),
+                    h('button', {
+                      type: 'button', style: S.actIcon, title: t('edit'),
+                      onClick: function (event) {
+                        event.stopPropagation();
+                        setEditing({ name: row.name, zhName: row.zhName, zhDesc: row.zhDesc, manual: row.manual });
+                      }
+                    }, '✎')
+                  )
+                : h('span', { key: 'x', style: S.tag(false) }, row.provider || t('noProvider')));
+          }
 
           items.push(h('div', {
             key: row.name,
             role: 'option',
             'aria-selected': batch ? isPicked : isSelected,
-            style: S.row(batch ? isPicked : isSelected, isHover, narrow),
+            style: S.row(batch ? isPicked : isSelected, isHover, narrow, gridTemplate),
             onMouseEnter: function () { setHover(row.name); },
             onMouseLeave: function () { setHover(''); },
             onClick: function () {
@@ -1541,15 +1733,42 @@ window.__ModuleLoader__.load({
           }
         });
 
+        const headerCells = narrow
+          ? [h('div', { key: 'h0' }, t('colName')), h('div', { key: 'h1' }, t('colProvider'))]
+          : COLUMNS.map(function (column, index) {
+              return h('div', { key: column.key, style: S.headerCell },
+                h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, t(column.label)),
+                index === COLUMNS.length - 1
+                  ? h('button', {
+                      type: 'button', style: S.headerReset, title: t('resetWidths'),
+                      onClick: function (event) { event.stopPropagation(); resetWidths(); }
+                    }, '⟲')
+                  : null,
+                h('span', {
+                  style: S.resizeHandle(resizing),
+                  title: t('dragHint'),
+                  onPointerDown: function (event) { startResize(index, event); }
+                })
+              );
+            });
+
         body = h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, overflow: 'hidden' } },
-          h('div', { style: S.thead(narrow) },
-            h('div', null, t('colName')),
-            narrow ? h('div', null, t('colSource')) : h('div', null, t('colEn')),
-            narrow ? null : h('div', null, t('colDesc')),
-            narrow ? null : h('div', null, t('colUsage')),
-            narrow ? null : h('div', null, t('colSource'))
-          ),
-          h('div', { style: S.list, role: 'listbox', 'aria-label': t('title') }, items)
+          h('div', {
+            style: {
+              flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column',
+              overflowX: narrow ? 'hidden' : 'auto', overflowY: 'hidden'
+            }
+          },
+            h('div', {
+              style: {
+                minWidth: narrow ? 'auto' : totalWidth + 'px',
+                flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column'
+              }
+            },
+              h('div', { style: S.thead(narrow, gridTemplate) }, headerCells),
+              h('div', { style: S.list, role: 'listbox', 'aria-label': t('title') }, items)
+            )
+          )
         );
       }
 
