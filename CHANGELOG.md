@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-11-16
+
+### Changed
+
+- The column header **英文标识** is now **英文名称**; the search placeholder, the plugin description and the
+  READMEs use the same wording. The English build already said “English name”.
+
 ## [1.5.1] - 2026-11-16
 
 ### Added
