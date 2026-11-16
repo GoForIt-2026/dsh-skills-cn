@@ -940,6 +940,9 @@ window.__ModuleLoader__.load({
       const [usage, setUsage] = useState({});
       // Automatic (model-driven) counts come from the Host; manual ones stay here.
       const [autoUsage, setAutoUsage] = useState({});
+      // `~/.dsh/skills-cn/zh.json`: extra Chinese names for skills the built-in
+      // dictionary does not know (your own skills, third-party packs).
+      const [localDict, setLocalDict] = useState({});
       const [narrow, setNarrow] = useState(false);
       const [cardMax, setCardMax] = useState(0);
       const [batch, setBatch] = useState(false);
@@ -1126,16 +1129,28 @@ window.__ModuleLoader__.load({
         }).catch(function () { /* manual counts still work without the Host */ });
       };
 
+      /** Read the local Chinese dictionary; an absent file simply adds nothing. */
+      const refreshDictionary = function () {
+        hostCall('/dictionary', {}).then(function (data) {
+          if (data && data.ok !== false && data.entries && typeof data.entries === 'object') {
+            setLocalDict(data.entries);
+          }
+        }).catch(function () { /* the built-in dictionary still works */ });
+      };
+
       useEffect(function () {
         refreshAutoUsage();
+        refreshDictionary();
       }, []);
 
       // The agent may load skills while this panel is open; poll the local route so
-      // the counters stay close to live without any model-facing cost.
+      // the counters stay close to live without any model-facing cost. The same tick
+      // picks up edits to the local dictionary file.
       useEffect(function () {
         const tick = function () {
           if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
           refreshAutoUsage();
+          refreshDictionary();
         };
         const timer = setInterval(tick, 20000);
         return function () { clearInterval(timer); };
@@ -1143,7 +1158,10 @@ window.__ModuleLoader__.load({
 
       // A reload (refresh, delete, restore) is a good moment to re-read them too.
       useEffect(function () {
-        if (attempt > 0) refreshAutoUsage();
+        if (attempt > 0) {
+          refreshAutoUsage();
+          refreshDictionary();
+        }
       }, [attempt]);
 
       const restoreTrash = async function (id) {
@@ -1411,13 +1429,15 @@ window.__ModuleLoader__.load({
         if (!rows) return [];
         return rows.map(function (row) {
           const manual = cache[row.name] || null;
+          const local = localDict[row.name] || null;
           const manualUsage = usage[row.name] || null;
           const auto = autoUsage[row.name] || null;
           const manualCount = manualUsage ? manualUsage.count || 0 : 0;
           const autoCount = auto ? auto.auto || 0 : 0;
           return Object.assign({}, row, {
-            zhName: (manual && manual.zhName) || row.dictName || '',
-            zhDesc: (manual && manual.zhDesc) || row.dictDesc || '',
+            // Priority: your ✎ edit > ~/.dsh/skills-cn/zh.json > built-in TERMS.
+            zhName: (manual && manual.zhName) || (local && local[0]) || row.dictName || '',
+            zhDesc: (manual && manual.zhDesc) || (local && local[1]) || row.dictDesc || '',
             manual: !!manual,
             manualCount: manualCount,
             autoCount: autoCount,
@@ -1425,7 +1445,7 @@ window.__ModuleLoader__.load({
             lastAt: Math.max(manualUsage ? manualUsage.lastAt || 0 : 0, auto ? auto.lastAt || 0 : 0)
           });
         });
-      }, [rows, cache, usage, autoUsage]);
+      }, [rows, cache, usage, autoUsage, localDict]);
 
       const counts = useMemo(function () {
         const total = { all: decorated.length, user: 0, bundled: 0, runtime: 0, other: 0 };

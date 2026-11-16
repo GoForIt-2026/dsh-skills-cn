@@ -48,6 +48,14 @@ dsh plugin --profile desktop add /absolute/path/to/dsh-skills-cn
 
 键是 `SKILL.md` 的 `name`（小写、连字符）。补词条不需要改别的文件。
 
+取名的规矩（大白话版，评审会按这个看）：
+
+- **2–8 个字，说清"干什么"**；用平时说话的词，不堆缩写、不用生僻字；
+- **不音译**：品牌/工具名保留原文（`Codex 命令行调用`），功能名按语义写；
+- 说明一句话，动词开头，写"什么时候用它"。
+
+个人的、第三方的技能不要往 `TERMS` 里塞——写进本机词典 `~/.dsh/skills-cn/zh.json` 就行（见 README「给自己的技能补中文」），既不用发版也不会污染公共词典。
+
 ## 发布规则
 
 - 版本遵守 [SemVer](https://semver.org/lang/zh-CN/)：行为变化升 minor/patch，破坏兼容升 major。

@@ -33,6 +33,7 @@ import {
   isValidUsageName,
   skillCallName
 } from './host/usage-core.js'
+import { readDictionary, dictionaryFile } from './host/local-dict.js'
 
 const PREFIX = '/__dsh-skills-cn'
 const INTENT_HEADER = 'x-dsh-skills-cn'
@@ -227,6 +228,18 @@ export function apply(ctx) {
     mount('/trash-list', async () => listTrash(skillRoots()))
     mount('/trash-restore', async (body) => restoreFromTrash(body.ids, skillRoots()))
     mount('/trash-purge', async (body) => purgeTrash(body.ids, skillRoots()))
+
+    // Local Chinese dictionary: `~/.dsh/skills-cn/zh.json`, re-read on every call so
+    // an edit shows up without reinstalling anything.
+    mount('/dictionary', async () => {
+      const read = await readDictionary(dictionaryFile())
+      return {
+        ok: true,
+        path: dictionaryFile(),
+        entries: read.entries,
+        invalid: read.ok ? undefined : read.reason
+      }
+    })
 
     // Counters only; the browser keeps its own manual counts in localStorage.
     mount('/usage', async () => ({ ok: true, entries: tracker.entries() }))

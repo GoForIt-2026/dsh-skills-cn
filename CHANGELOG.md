@@ -4,6 +4,27 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-11-16
+
+### Added
+
+- **Local Chinese dictionary**: `~/.dsh/skills-cn/zh.json` gives a Chinese name to skills the built-in
+  `TERMS` table does not know — your own skills, third-party packs, one-off tools. One line per skill:
+
+  ```json
+  { "my-own-skill": ["我的技能", "一句话说清它干什么"] }
+  ```
+
+  Priority is **your ✎ edit > local dictionary > built-in `TERMS`**. The Host re-reads the file on every
+  request and the panel polls it every 20 seconds, so an edit shows up after a refresh — no reinstall,
+  no release, and it never changes the public dictionary.
+- Naming rule written down (README + CONTRIBUTING): 大白话、2–8 字、说清“干什么”，不音译、不用生僻词。
+
+### Tests
+
+- 6 new tests for the dictionary parser (array/string/object shapes, invalid names dropped, length and
+  row caps, missing/invalid file) — 35 in total.
+
 ## [1.5.0] - 2026-11-16
 
 ### Added

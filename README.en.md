@@ -162,13 +162,40 @@ Only when the registry is unavailable does the panel fall back to the path heuri
 
 ## Where the Chinese comes from
 
-`client.js` ships a **TERMS** dictionary (46 entries today) keyed by the skill's English `name`, each mapping to `[Chinese name, Chinese description]`. Skills that are not in the dictionary do not disappear: they render their English name and description with a small “no Chinese entry” marker — use ✎ to add one, and that manual entry wins from then on.
+`client.js` ships a **TERMS** dictionary (43 entries today) keyed by the skill's English `name`, each mapping to `[Chinese name, Chinese description]`. Skills that are not in the dictionary do not disappear: they render their English name and description with a small “no Chinese entry” marker.
 
 Adding an entry to the dictionary itself is one line — edit `TERMS` in `client.js` and open a PR:
 
 ```js
 'markdown-export': ['Markdown 导出', '把会话导出成 Markdown 文件'],
 ```
+
+### Your own skills: the local dictionary (no release needed)
+
+The built-in table only knows common packs. For **skills you named yourself**, third-party packs or one-off tools, write the entry into a file on this machine:
+
+```
+~/.dsh/skills-cn/zh.json
+```
+
+```json
+{
+  "universal-video-prompt-reverse": ["视频反推提示词", "把参考视频逐镜头拆开，反推成可直接用的生成提示词"],
+  "my-own-skill": ["我的技能", "一句话说清它干什么"]
+}
+```
+
+- One line per skill; the Chinese name is required, the description optional (a bare string works too);
+- **Priority**: your ✎ edit in the panel > local dictionary > built-in `TERMS`; delete the line to fall back to “no Chinese entry”;
+- The Host re-reads the file per request and the panel polls it every 20 seconds, so **a refresh is enough** — no reinstall, no release, and the public dictionary stays untouched;
+- A missing or malformed file is harmless: bad rows are ignored and the panel keeps working.
+
+### Naming rules (plain language)
+
+- **2–8 characters, say what it does**: `ab-testing` → A/B 测试, `code-review-and-quality` → 代码审查;
+- Use everyday words; prefer plain over fancy, no rare characters or abbreviation soup;
+- **No transliteration**: keep brand/tool names (`Codex 命令行调用`), describe function by meaning;
+- Description: one sentence, verb first, “when to use it”.
 
 ## Where the data lives
 

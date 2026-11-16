@@ -140,6 +140,15 @@ test('writes the store atomically into a directory that does not exist yet', asy
   assert.deepEqual(Object.keys(raw).sort(), ['entries', 'version'], 'nothing else is persisted')
 })
 
+test('a store file saved with a BOM still reads', async () => {
+  const dir = await tmpdir()
+  const file = path.join(dir, 'usage.json')
+  await fs.writeFile(file, '\uFEFF' + JSON.stringify({ version: 1, entries: { alpha: { auto: 2, lastAt: 7 } } }), 'utf8')
+  const read = await readUsage(file)
+  assert.equal(read.ok, true)
+  assert.equal(read.store.entries.alpha.auto, 2)
+})
+
 test('the tracker counts before load, coalesces writes and flushes on dispose', async () => {
   const dir = await tmpdir()
   const file = path.join(dir, 'usage.json')

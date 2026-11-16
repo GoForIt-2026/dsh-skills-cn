@@ -139,7 +139,8 @@ export function clearUsage(store, names) {  const base = normalizeStore(store)
 export async function readUsage(file) {
   try {
     const raw = await fs.readFile(file, 'utf8')
-    return { ok: true, store: normalizeStore(JSON.parse(raw)) }
+    // Tolerate a "UTF-8 with BOM" save, which JSON.parse would reject.
+    return { ok: true, store: normalizeStore(JSON.parse(raw.replace(/^\uFEFF/, ''))) }
   } catch (error) {
     if (error && error.code === 'ENOENT') return { ok: true, store: normalizeStore(null), missing: true }
     // A corrupt file must not stop counting: start clean and let the next flush
