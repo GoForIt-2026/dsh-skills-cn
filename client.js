@@ -63,6 +63,7 @@ window.__ModuleLoader__.load({
       untranslated: '未收录中文',
       hint: '↑↓ 选择 · Enter 插入 · / 搜索',
       usedN: '已用 {n} 次',
+      usedSplit: '已用 {n} 次 · 手动 {m} / 自动 {a}',
       neverUsed: '未使用',
       lastAt: '最近 {time}',
       selected: '已选中：{name} / {id}',
@@ -84,7 +85,7 @@ window.__ModuleLoader__.load({
       restored: '已恢复为内置对照',
       resetUsage: '清空使用记录',
       resetTitle: '清空全部使用记录？',
-      resetBody: '会删除所有技能的使用次数与最近使用时间，列表将回到默认顺序。该操作不可撤销。',
+      resetBody: '会删除所有技能的使用次数与最近使用时间——手动插入与模型自动调用分开记录，这里两边一起清；列表将回到默认顺序。该操作不可撤销。',
       resetOk: '确认清空',
       resetDone: '使用记录已清空',
       pagerPrev: '上一页',
@@ -202,6 +203,7 @@ window.__ModuleLoader__.load({
       untranslated: 'no Chinese entry',
       hint: '↑↓ select · Enter insert · / search',
       usedN: 'used {n}×',
+      usedSplit: 'used {n}× · manual {m} / auto {a}',
       neverUsed: 'unused',
       lastAt: 'last {time}',
       selected: 'Selected: {name} / {id}',
@@ -223,7 +225,7 @@ window.__ModuleLoader__.load({
       restored: 'Restored the built-in entry',
       resetUsage: 'Clear usage records',
       resetTitle: 'Clear all usage records?',
-      resetBody: 'Every usage count and last-used time is deleted and the list returns to its default order. This cannot be undone.',
+      resetBody: 'Every usage count and last-used time is deleted — manual inserts and model-driven loads are tracked separately and both are cleared; the list returns to its default order. This cannot be undone.',
       resetOk: 'Clear',
       resetDone: 'Usage records cleared',
       pagerPrev: 'Previous',
@@ -936,6 +938,8 @@ window.__ModuleLoader__.load({
       const [confirmReset, setConfirmReset] = useState(false);
       const [cache, setCache] = useState({});
       const [usage, setUsage] = useState({});
+      // Automatic (model-driven) counts come from the Host; manual ones stay here.
+      const [autoUsage, setAutoUsage] = useState({});
       const [narrow, setNarrow] = useState(false);
       const [cardMax, setCardMax] = useState(0);
       const [batch, setBatch] = useState(false);
@@ -1113,6 +1117,35 @@ window.__ModuleLoader__.load({
         refreshTrash();
       }, []);
 
+      /** Read the Host's automatic counters; absent Host half keeps them empty. */
+      const refreshAutoUsage = function () {
+        hostCall('/usage', {}).then(function (data) {
+          if (data && data.ok !== false && data.entries && typeof data.entries === 'object') {
+            setAutoUsage(data.entries);
+          }
+        }).catch(function () { /* manual counts still work without the Host */ });
+      };
+
+      useEffect(function () {
+        refreshAutoUsage();
+      }, []);
+
+      // The agent may load skills while this panel is open; poll the local route so
+      // the counters stay close to live without any model-facing cost.
+      useEffect(function () {
+        const tick = function () {
+          if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+          refreshAutoUsage();
+        };
+        const timer = setInterval(tick, 20000);
+        return function () { clearInterval(timer); };
+      }, []);
+
+      // A reload (refresh, delete, restore) is a good moment to re-read them too.
+      useEffect(function () {
+        if (attempt > 0) refreshAutoUsage();
+      }, [attempt]);
+
       const restoreTrash = async function (id) {
         if (trashBusy) return;
         setTrashBusy(true);
@@ -1267,12 +1300,18 @@ window.__ModuleLoader__.load({
         if (removedNames.length > 0) {
           const nextCache = Object.assign({}, cache);
           const nextUsage = Object.assign({}, usage);
+          const nextAuto = Object.assign({}, autoUsage);
           for (let i = 0; i < removedNames.length; i++) {
             delete nextCache[removedNames[i]];
             delete nextUsage[removedNames[i]];
+            delete nextAuto[removedNames[i]];
           }
           persistCache(nextCache);
           persistUsage(nextUsage);
+          setAutoUsage(nextAuto);
+          // Drop the Host's automatic counters for those names as well, so a later
+          // reinstall does not resurrect an old tally.
+          hostCall('/usage/clear', { names: removedNames }).catch(function () {});
           setSelected(function (current) { return removedNames.indexOf(current) >= 0 ? '' : current; });
         }
 
@@ -1366,19 +1405,27 @@ window.__ModuleLoader__.load({
       };
 
       // Merge the bundled dictionary with the user's manual overrides and usage.
+      // The displayed count is manual (browser) + automatic (Host) — the tooltip
+      // keeps the two halves visible so the number never lies about its source.
       const decorated = useMemo(function () {
         if (!rows) return [];
         return rows.map(function (row) {
           const manual = cache[row.name] || null;
+          const manualUsage = usage[row.name] || null;
+          const auto = autoUsage[row.name] || null;
+          const manualCount = manualUsage ? manualUsage.count || 0 : 0;
+          const autoCount = auto ? auto.auto || 0 : 0;
           return Object.assign({}, row, {
             zhName: (manual && manual.zhName) || row.dictName || '',
             zhDesc: (manual && manual.zhDesc) || row.dictDesc || '',
             manual: !!manual,
-            count: usage[row.name] ? usage[row.name].count || 0 : 0,
-            lastAt: usage[row.name] ? usage[row.name].lastAt || 0 : 0
+            manualCount: manualCount,
+            autoCount: autoCount,
+            count: manualCount + autoCount,
+            lastAt: Math.max(manualUsage ? manualUsage.lastAt || 0 : 0, auto ? auto.lastAt || 0 : 0)
           });
         });
-      }, [rows, cache, usage]);
+      }, [rows, cache, usage, autoUsage]);
 
       const counts = useMemo(function () {
         const total = { all: decorated.length, user: 0, bundled: 0, runtime: 0, other: 0 };
@@ -1519,6 +1566,9 @@ window.__ModuleLoader__.load({
 
       const clearUsage = function () {
         persistUsage({});
+        setAutoUsage({});
+        // Manual counts live in this browser, automatic ones on the Host: clear both.
+        hostCall('/usage/clear', {}).catch(function () {});
         setConfirmReset(false);
         flash(t('resetDone'), true);
       };
@@ -1709,7 +1759,11 @@ window.__ModuleLoader__.load({
           if (narrow) {
             cells.push(h('div', {
               key: 'n',
-              title: (row.zhName ? row.zhName + ' · ' + row.name : row.name) + (row.zhDesc ? '\n' + row.zhDesc : ''),
+              title: (row.zhName ? row.zhName + ' · ' + row.name : row.name)
+                + (row.zhDesc ? '\n' + row.zhDesc : '')
+                + '\n' + (row.count
+                  ? t('usedSplit', { n: row.count, m: row.manualCount, a: row.autoCount })
+                  : t('neverUsed')),
               style: { minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }
             },
               h('div', { style: S.zhName },
@@ -1773,7 +1827,10 @@ window.__ModuleLoader__.load({
                 }, row.provider || row.source || t('noProvider')));
             cells.push(h('div', {
               key: 'u', style: S.usage,
-              title: row.lastAt ? t('lastAt', { time: relTime(row.lastAt) }) : t('neverUsed')
+              title: row.count
+                ? t('usedSplit', { n: row.count, m: row.manualCount, a: row.autoCount })
+                  + (row.lastAt ? '\n' + t('lastAt', { time: relTime(row.lastAt) }) : '')
+                : t('neverUsed')
             }, row.count ? t('usedN', { n: row.count }) : t('neverUsed')));
           }
 

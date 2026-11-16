@@ -4,6 +4,32 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-11-16
+
+### Added
+
+- **Automatic usage counts.** The Host half now listens to `tools/result` and adds one use whenever the
+  model loads a skill through the `skill` tool — including loads performed by subagents. Counters are
+  written to `~/.dsh/skills-cn/usage.json` (skill name, count, last-used timestamp only, never any skill
+  content), debounced and replaced atomically, with a flush on plugin unload.
+- The 使用 column now shows the **total** (manual + automatic) and its tooltip splits the two:
+  “已用 N 次 · 手动 M / 自动 A”. The narrow layout shows the same split in the row tooltip.
+- 清空使用记录 clears the browser's manual counts **and** the Host's automatic ones; deleting a skill also
+  drops its automatic counter so a later reinstall starts from zero.
+
+### Notes
+
+- **This feature costs no tokens.** It only observes tool results that already happened: no prompt
+  section, no tool schema, no extra model request, and nothing new enters the model's context.
+- Manual counts stay in `localStorage` (a reinstall of the OS starts them over); automatic counts live in
+  `~/.dsh/skills-cn/usage.json`.
+
+### Tests
+
+- 11 new unit tests for the counters: name validation (including `__proto__`-style keys), damaged-store
+  normalization, the `MAX_ENTRIES` cap, merge/clear semantics, atomic IO, the debounced tracker and the
+  `skill`-call parser.
+
 ## [1.4.4] - 2026-11-16
 
 ### Changed

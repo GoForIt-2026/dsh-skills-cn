@@ -9,6 +9,8 @@
  *   POST /__dsh-skills-cn/roots    -> allowed skill roots (for the UI's enablement)
  *   POST /__dsh-skills-cn/preview  -> what would be deleted, plus lock status
  *   POST /__dsh-skills-cn/delete   -> delete + prune .skill-lock.json
+ *   POST /__dsh-skills-cn/usage    -> automatic (model-driven) usage counters
+ *   POST /__dsh-skills-cn/usage/clear -> drop some or all of those counters
  *
  * Every route requires the intent header and a same-origin caller; the delete
  * route additionally requires the literal confirmation token. A route that
@@ -25,6 +27,12 @@ import {
   CONFIRM_TOKEN,
   MAX_NAMES
 } from './host/skills-core.js'
+import {
+  UsageTracker,
+  usageFile,
+  isValidUsageName,
+  skillCallName
+} from './host/usage-core.js'
 
 const PREFIX = '/__dsh-skills-cn'
 const INTENT_HEADER = 'x-dsh-skills-cn'
@@ -172,6 +180,24 @@ function route(handler, webServer) {
 }
 
 export function apply(ctx) {
+  // Automatic usage: observe every tool result and count the ones where the model
+  // loaded a skill. This is a passive listener — it adds nothing to the model's
+  // prompt, tools or context, and it runs whether or not the panel is open.
+  const tracker = new UsageTracker(usageFile())
+  ctx.effect(() => {
+    tracker.load()
+    const off = ctx.on('tools/result', (exec) => {
+      try {
+        const name = skillCallName(exec)
+        if (name) tracker.bump(name)
+      } catch (error) { /* a counter must never disturb a tool result */ }
+    })
+    return () => {
+      if (typeof off === 'function') off()
+      tracker.dispose()
+    }
+  }, 'skill-manager: automatic usage')
+
   ctx.inject(['webServer'], (webCtx) => {
     const server = webCtx.webServer
     const mount = (path, handler) => {
@@ -201,5 +227,21 @@ export function apply(ctx) {
     mount('/trash-list', async () => listTrash(skillRoots()))
     mount('/trash-restore', async (body) => restoreFromTrash(body.ids, skillRoots()))
     mount('/trash-purge', async (body) => purgeTrash(body.ids, skillRoots()))
+
+    // Counters only; the browser keeps its own manual counts in localStorage.
+    mount('/usage', async () => ({ ok: true, entries: tracker.entries() }))
+    mount('/usage/clear', async (body) => {
+      const payload = body || {}
+      // `{ names: [...] }` removes exactly those rows (an empty list is a no-op);
+      // omitting `names` clears every counter.
+      if (Object.hasOwn(payload, 'names')) {
+        const names = Array.isArray(payload.names) ? payload.names.filter(isValidUsageName) : []
+        if (names.length === 0) return { ok: true, cleared: 0, entries: tracker.entries() }
+        await tracker.clear(names)
+        return { ok: true, cleared: names.length, entries: tracker.entries() }
+      }
+      await tracker.clear([])
+      return { ok: true, cleared: 'all', entries: tracker.entries() }
+    })
   })
 }

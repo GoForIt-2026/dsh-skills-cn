@@ -29,13 +29,12 @@ This plugin puts Chinese and English side by side: Chinese name on the left, the
 - **Draggable column widths**: every column edge resizes, widths persist locally, and a `⟲` button in the last header restores the defaults. Columns that no longer fit scroll horizontally.
 - **Three sort orders**: most used (default, ties by most recent), name A→Z, by source.
 - **Paging**: 25 rows per page with numbered page buttons, total and page indicator; changing the search, group or sort returns to page 1 while the selection survives.
-- **Usage counters**: each successful insert records a count and a last-used time, shown per row and clearable from the footer behind a confirmation.
+- **Usage counters**: a manual insert counts once and so does a **model-driven load of the skill**; the row shows the total and its tooltip splits manual vs automatic. “Clear usage records” clears both sides behind a confirmation, and automatic counting costs no tokens (see below).
 - **Chinese overrides**: edit the Chinese name and description of any row; the manual entry always wins over the bundled dictionary and can be restored.
 - **Expandable rows**: English source description, `whenToUse` and the skill path.
 - **Instant search** across Chinese name, Chinese description, English id and the original English description.
 - **One-click insert**: double-click, `Enter`, or the row's **Insert** button appends `/skill-name ` to the composer; the caret stays at the end and **nothing is sent**. The same command is not written twice.
-- **Remembered view state**: group, sort and page survive a reload; the selected skill does not, so nothing is inserted by accident.
-- **Read-only browsing**: normal mode creates, edits and deletes nothing.
+- **Remembered view state**: group, sort and page survive a reload; the selected skill does not, so nothing is inserted by accident.- **Read-only browsing**: normal mode creates, edits and deletes nothing.
 - **Batch deletion**: the toolbar's *Delete skills* button enters selection mode; tick rows, confirm with a typed word, and the skill directories are really removed — together with their `~/.agents/.skill-lock.json` registrations (see below).
 - **Offline**: Chinese text comes from the bundled dictionary plus your own edits — no network, no model call.
 - **Theme and locale aware**, with a stacked layout on narrow views.
@@ -173,15 +172,40 @@ Adding an entry to the dictionary itself is one line — edit `TERMS` in `client
 
 ## Where the data lives
 
-Only three `localStorage` keys, never the skill directories:
+Three `localStorage` keys in the browser, never the skill directories:
 
 | Key | Contents |
 |---|---|
 | `dsh-skills-cn/cache/v1` | Your manual Chinese name/description overrides |
-| `dsh-skills-cn/usage/v1` | Usage counts and last-used times |
+| `dsh-skills-cn/usage/v1` | **Manual** usage counts and last-used times |
 | `dsh-skills-cn/ui/v1` | Last group, sort order and page |
 
-Clearing them resets the plugin; no skill file is touched.
+The Host half also writes one small file, holding automatic counts only:
+
+```
+~/.dsh/skills-cn/usage.json      # {"version":1,"entries":{"<skill>":{"auto":3,"lastAt":1731…}}}
+```
+
+It contains nothing but skill names, counts and timestamps — **never skill content** — and is written
+debounced (800 ms) with a temp-file-plus-rename replacement, plus a flush on plugin unload. Deleting the
+file zeroes the automatic counts; no skill file is touched.
+
+## How usage is counted (manual / automatic)
+
+| Source | Trigger | Stored in | Cleared by |
+|---|---|---|---|
+| Manual | you click **Insert** (the moment the command enters the composer) | browser `localStorage` | “Clear usage records” / OS reinstall |
+| Automatic | the model loads the skill through the `skill` tool (subagents included) | `~/.dsh/skills-cn/usage.json` | “Clear usage records” / deleting the skill / removing the file |
+
+Automatic counting is a **passive listener** on the Host: DSH already emits `tools/result` for every tool
+call, and the plugin only checks `exec.name === 'skill'`, reads the skill name from the arguments and
+adds one. It **does not touch the prompt, register a tool, or make a model request** — the model sees
+exactly the same context, so it **costs no tokens**; the real cost is one in-memory counter and a few KB
+of JSON on flush.
+
+The two numbers mean different things: manual is “you put it in the composer” (even if you never sent
+it), automatic is “the model actually loaded it”. The row shows the total and the tooltip shows the split,
+so the number never pretends to have a single source.
 
 ## Compatibility
 
@@ -192,14 +216,14 @@ Clearing them resets the plugin; no skill file is touched.
 | Theme | follows light and dark (all colours are `--dsw-alias-*` tokens) |
 | Locale | UI in Chinese and English; skill ids stay English |
 
-The only DSH internal it depends on is **`skills/list`** — the same catalog the `/` slash menu uses — probed as `skills` → `sessionSkillCatalog` → `skillCatalog`. Insertion uses the composer's `inputActions`, degrading from `insertText` to `setDraft` to the clipboard. If any layer is unavailable the panel still mounts and shows a “catalog unavailable / retry” state instead of a blank slot.
+The DSH internals it depends on are **`skills/list`** — the same catalog the `/` slash menu uses — probed as `skills` → `sessionSkillCatalog` → `skillCatalog`. Insertion uses the composer's `inputActions`, degrading from `insertText` to `setDraft` to the clipboard. If any layer is unavailable the panel still mounts and shows a “catalog unavailable / retry” state instead of a blank slot.
 
 ## Privacy and boundaries
 
 - Browsing reads the skill catalog DSH already loaded; it does not walk the disk or parse `SKILL.md`.
-- Nothing is uploaded. Apart from the deletion request to a loopback route on this machine, no network request is made.
-- The only write is the **batch deletion you explicitly confirm** (directories + `.skill-lock.json`), gated by a same-origin check, an intent header and a typed confirmation word.
-- The plugin stores nothing on disk; three `localStorage` keys hold its own state.
+- Nothing is uploaded. Apart from the loopback routes on this machine, no network request is made.
+- Writes exist in exactly two places: the **batch deletion you explicitly confirm** (directories + `.skill-lock.json`, gated by a same-origin check, an intent header and a typed confirmation word), and the **automatic counter file** `~/.dsh/skills-cn/usage.json` (skill names, counts, timestamps only).
+- Automatic counting never asks the model for another request and never adds context — **zero token cost**.
 
 ## Reinstalling on a new machine
 
